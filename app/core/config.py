@@ -5,6 +5,7 @@ read from environment variables (and `.env` in development), and accessed throug
 `get_settings()` instead of a module-level global.
 """
 
+import re
 from enum import StrEnum
 from functools import lru_cache
 from typing import Annotated, Literal, Self
@@ -55,6 +56,9 @@ class Settings(BaseSettings):
 
     # NoDecode: read the raw comma-separated string instead of expecting JSON.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = ["http://localhost:5173", "http://localhost:3000"]
+    # Development convenience: also allow any origin matching this regex (e.g. any localhost port or
+    # private-LAN address). Must be empty in production, where only the exact CORS_ORIGINS list applies.
+    CORS_ORIGIN_REGEX: str = ""
     TRUSTED_HOSTS: Annotated[list[str], NoDecode] = ["localhost", "127.0.0.1", "test"]
     ADMIN_APP_URL: str = "http://localhost:5173"
 
@@ -99,6 +103,11 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    def origin_allowed(self, origin: str) -> bool:
+        if origin in self.CORS_ORIGINS:
+            return True
+        return bool(self.CORS_ORIGIN_REGEX) and re.fullmatch(self.CORS_ORIGIN_REGEX, origin) is not None
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV is Environment.PRODUCTION
@@ -116,6 +125,8 @@ class Settings(BaseSettings):
             problems.append("JWT_SECRET_KEY must be a random value of at least 32 characters")
         if any(o == "*" or o.startswith("http://") for o in self.CORS_ORIGINS):
             problems.append("CORS_ORIGINS must list explicit https:// origins")
+        if self.CORS_ORIGIN_REGEX:
+            problems.append("CORS_ORIGIN_REGEX must be empty")
         if not self.TRUSTED_HOSTS or "*" in self.TRUSTED_HOSTS:
             problems.append("TRUSTED_HOSTS must list explicit host names")
         if self.EMAIL_BACKEND != "smtp":

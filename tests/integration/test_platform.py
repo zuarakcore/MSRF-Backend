@@ -64,3 +64,24 @@ async def test_files_are_embeddable_but_api_is_not(client: AsyncClient) -> None:
     assert api.headers["cross-origin-resource-policy"] == "same-site"
     media = await client.get("/media/public/missing.png")
     assert media.headers["cross-origin-resource-policy"] == "cross-origin"
+
+
+async def test_dev_origin_regex_allows_lan_frontends(client: AsyncClient, monkeypatch: object) -> None:
+    from app.core.config import get_settings
+    from app.main import create_app
+
+    settings = get_settings()
+    regex = r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(:\d{1,5})?$"
+    monkeypatch.setattr(settings, "CORS_ORIGIN_REGEX", regex)  # type: ignore[attr-defined]
+    dev_app = create_app()
+    async with AsyncClient(transport=ASGITransport(app=dev_app), base_url="https://test") as ac:
+        for origin in ("http://localhost:5174", "http://127.0.0.1:3000", "http://192.168.1.20:5173"):
+            r = await ac.options(
+                "/api/v1/auth/login", headers={"Origin": origin, "Access-Control-Request-Method": "POST"}
+            )
+            assert r.headers.get("access-control-allow-origin") == origin, origin
+        blocked = await ac.options(
+            "/api/v1/auth/login",
+            headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
+        )
+        assert "access-control-allow-origin" not in blocked.headers

@@ -32,6 +32,7 @@ def test_safe_production_settings_load() -> None:
         ({"CORS_ORIGINS": "*"}, "CORS_ORIGINS"),
         ({"CORS_ORIGINS": "http://admin.example.com"}, "CORS_ORIGINS"),
         ({"EMAIL_BACKEND": "console"}, "EMAIL_BACKEND"),
+        ({"CORS_ORIGIN_REGEX": ".*"}, "CORS_ORIGIN_REGEX"),
     ],
 )
 def test_unsafe_production_settings_refused(override: dict[str, object], message: str) -> None:

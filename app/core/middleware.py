@@ -121,6 +121,7 @@ class RequestContextMiddleware:
         start = time.perf_counter()
         status_code = 500
         path: str = scope["path"]
+        origin = dict(scope["headers"]).get(b"origin", b"").decode("latin-1")[:200] or None
 
         async def send_wrapper(message: Message) -> None:
             nonlocal status_code
@@ -147,6 +148,8 @@ class RequestContextMiddleware:
                     "method": scope["method"],
                     "path": path,
                     "status": status_code,
+                    "origin": origin,
+                    "client": (scope.get("client") or ("?",))[0],
                     "duration_ms": round((time.perf_counter() - start) * 1000, 1),
                 },
             )

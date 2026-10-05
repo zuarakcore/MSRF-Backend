@@ -41,7 +41,7 @@ def verify_origin(request: Request) -> None:
     non-browser clients, which cannot be driven by a malicious site, so they are allowed.
     """
     origin = request.headers.get("origin")
-    if origin is not None and origin not in get_settings().CORS_ORIGINS:
+    if origin is not None and not get_settings().origin_allowed(origin):
         raise Forbidden("Origin not allowed", code="ORIGIN_NOT_ALLOWED")
 
 
