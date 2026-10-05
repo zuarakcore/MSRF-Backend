@@ -90,11 +90,14 @@ def create_app() -> FastAPI:
         RequestContextMiddleware,
         hsts=settings.is_production,
         docs_paths=("/api/docs", "/api/redoc", "/api/openapi.json"),
-        embeddable_paths=("/media/", f"{settings.API_PREFIX}/files/"),
+        embeddable_paths=("/media/", "/static/", f"{settings.API_PREFIX}/files/"),
         allow_private_network=not settings.is_production,
     )
 
     app.include_router(api_router, prefix=settings.API_PREFIX)
+
+    # Built-in assets shipped with the code (the default placeholder image).
+    app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
     if settings.STORAGE_BACKEND == "local":
         # Development only: serve PUBLIC files (gallery, team photos). In production a CDN/bucket does this.

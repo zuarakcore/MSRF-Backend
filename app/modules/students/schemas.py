@@ -20,7 +20,7 @@ from app.core.validators import (
     PastOrToday,
     Phone,
 )
-from app.modules.files.schemas import FileRef
+from app.modules.files.schemas import FileRef, Photo
 from app.modules.reference.schemas import RefItem
 
 OptionalEmail = Annotated[EmailStr | None, EmptyStrToNone]
@@ -105,7 +105,7 @@ class StudentListItem(CamelModel):
     id: uuid.UUID
     student_code: str
     full_name: str
-    photo: FileRef | None
+    photo: Photo
     date_of_birth: date
     gender: Gender
     phone: str | None

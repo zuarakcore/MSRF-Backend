@@ -7,6 +7,7 @@ from fastapi import UploadFile
 from sqlalchemy import Select, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.email import queue_email
 from app.core.enums import RecordStatus
 from app.core.errors import AppError, BusinessRuleViolation, Conflict, NotFound
@@ -221,7 +222,7 @@ async def public_team(db: AsyncSession) -> list[PublicTeamMember]:
             name=m.name,
             designation=m.designation,
             biography=m.biography,
-            photo_url=file_url(m.photo) if m.photo else None,
+            photo_url=file_url(m.photo) if m.photo else get_settings().default_image_url,
         )
         for m in rows
     ]
@@ -358,7 +359,7 @@ def public_gallery_item(item: GalleryItem) -> PublicGalleryItem:
         category=item.category,
         is_wide=item.is_wide,
         image_url=file_url(item.image),
-        thumbnail_url=file_url(item.thumbnail) if item.thumbnail else None,
+        thumbnail_url=file_url(item.thumbnail) if item.thumbnail else file_url(item.image),
         width=item.image.width,
         height=item.image.height,
     )

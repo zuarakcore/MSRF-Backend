@@ -18,7 +18,7 @@ from app.core.search import contains
 from app.core.timeutils import period_bounds, today_local
 from app.modules.coaches.models import CoachProfile
 from app.modules.coaches.service import category_ids_of
-from app.modules.files.schemas import FileRef
+from app.modules.files.schemas import Photo
 from app.modules.performance import service as performance
 from app.modules.performance.models import PerformanceReport
 from app.modules.performance.schemas import PerformanceReportSummary
@@ -35,7 +35,7 @@ class CoachStudentItem(CamelModel):
     id: uuid.UUID
     student_code: str
     full_name: str
-    photo: FileRef | None
+    photo: Photo
     date_of_birth: date
     gender: Gender
     category: RefItem

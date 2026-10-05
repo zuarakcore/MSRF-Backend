@@ -8,7 +8,7 @@ from app.core.enums import AttendanceStatus, BloodGroup, Gender, RecordStatus
 from app.core.schemas import CamelModel, InputModel
 from app.core.validators import Name, OptionalText300, OptionalText1000, PastOrToday, Phone
 from app.modules.coaches.models import DocumentKind
-from app.modules.files.schemas import FileRef
+from app.modules.files.schemas import FileRef, Photo
 from app.modules.reference.schemas import RefItem
 
 
@@ -53,7 +53,7 @@ class CoachListItem(CamelModel):
     full_name: str
     email: str
     phone: str
-    photo: FileRef | None
+    photo: Photo
     experience_years: int
     joined_date: date
     status: RecordStatus

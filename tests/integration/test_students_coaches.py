@@ -323,3 +323,24 @@ async def test_unknown_birth_year_filter_and_dates(client: AsyncClient, make_use
     headers = await _admin(client, make_user)
     response = await client.get(f"{API}/students", params={"birthYear": 1800}, headers=headers)
     assert response.status_code == 422
+
+
+async def test_missing_photos_use_the_default_image(
+    client: AsyncClient, make_user: UserFactory, db: AsyncSession
+) -> None:
+    headers = await _admin(client, make_user)
+    cat, pt, tc = await make_refs(db)
+    await make_student(db, cat, pt, tc)
+    await make_coach(db, [cat])
+    student = (await client.get(f"{API}/students", headers=headers)).json()["items"][0]
+    coach = (await client.get(f"{API}/coaches", headers=headers)).json()["items"][0]
+    for photo in (student["photo"], coach["photo"]):
+        assert photo["isDefault"] is True
+        assert photo["id"] is None
+        assert photo["url"].endswith("/static/default-image.png")
+
+    await client.post(
+        f"{API}/team-members", json={"name": "No Photo", "designation": "Director"}, headers=headers
+    )
+    public = (await client.get(f"{API}/public/team-members")).json()
+    assert public[0]["photoUrl"].endswith("/static/default-image.png")

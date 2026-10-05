@@ -100,3 +100,10 @@ async def test_rejected_host_response_still_has_cors_headers() -> None:
         response = await ac.get("/api/v1/health/live", headers={"Origin": ALLOWED_ORIGIN})
     assert response.status_code == 400
     assert response.headers["access-control-allow-origin"] == ALLOWED_ORIGIN
+
+
+async def test_default_image_is_served_and_embeddable(client: AsyncClient) -> None:
+    response = await client.get("/static/default-image.png")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.headers["cross-origin-resource-policy"] == "cross-origin"

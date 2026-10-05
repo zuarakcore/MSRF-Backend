@@ -18,7 +18,7 @@ from app.core.validators import (
     OptStr2048,
     Phone,
 )
-from app.modules.files.schemas import FileRef
+from app.modules.files.schemas import FileRef, Photo
 from app.modules.website.models import ApplicationStatus, EnquiryStatus, JobStatus
 
 Label80 = OptStr80
@@ -120,7 +120,7 @@ class TeamMemberOut(CamelModel):
     name: str
     designation: str
     biography: str | None
-    photo: FileRef | None
+    photo: Photo
     status: RecordStatus
     sort_order: int
     created_at: datetime
@@ -131,7 +131,7 @@ class PublicTeamMember(CamelModel):
     name: str
     designation: str
     biography: str | None
-    photo_url: str | None
+    photo_url: str
 
 
 # --- gallery -------------------------------------------------------------------------------
@@ -166,7 +166,7 @@ class PublicGalleryItem(CamelModel):
     category: str
     is_wide: bool
     image_url: str
-    thumbnail_url: str | None
+    thumbnail_url: str
     width: int | None
     height: int | None
 

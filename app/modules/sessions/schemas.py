@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 from app.core.enums import AttendanceStatus
 from app.core.schemas import CamelModel, InputModel
 from app.core.validators import OptionalText300, OptionalText2000
-from app.modules.files.schemas import FileRef
+from app.modules.files.schemas import Photo
 from app.modules.reference.schemas import RefItem
 
 
@@ -85,7 +85,7 @@ class AttendanceStudent(CamelModel):
     id: uuid.UUID
     student_code: str
     full_name: str
-    photo: FileRef | None
+    photo: Photo
 
 
 class AttendanceOut(CamelModel):
@@ -108,7 +108,7 @@ class RosterStudent(CamelModel):
     id: uuid.UUID
     student_code: str
     full_name: str
-    photo: FileRef | None
+    photo: Photo
     category: RefItem
     batch: str
 
