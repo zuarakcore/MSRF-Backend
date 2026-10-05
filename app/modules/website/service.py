@@ -22,7 +22,6 @@ from app.modules.notifications import service as notifications
 from app.modules.notifications.models import NotificationType
 from app.modules.website.models import (
     Enquiry,
-    Event,
     GalleryItem,
     Job,
     JobApplication,
@@ -37,9 +36,6 @@ from app.modules.website.schemas import (
     EnquiryIn,
     EnquiryOut,
     EnquiryPatch,
-    EventIn,
-    EventOut,
-    EventPatch,
     GalleryItemOut,
     GalleryPatch,
     JobIn,
@@ -48,7 +44,6 @@ from app.modules.website.schemas import (
     ProgrammeIn,
     ProgrammeOut,
     ProgrammePatch,
-    PublicEvent,
     PublicGalleryItem,
     PublicJob,
     PublicProgramme,
@@ -58,7 +53,7 @@ from app.modules.website.schemas import (
     TeamMemberPatch,
 )
 
-SortableModel = type[Programme] | type[TeamMember] | type[GalleryItem] | type[Event]
+SortableModel = type[Programme] | type[TeamMember] | type[GalleryItem]
 
 
 def _apply(obj: Any, values: dict[str, Any], required: set[str]) -> None:
@@ -97,7 +92,7 @@ async def list_programmes(
     stmt = (
         select(Programme, func.coalesce(counts.c.n, 0))
         .outerjoin(counts, counts.c.programme_id == Programme.id)
-        .order_by(Programme.sort_order, Programme.title)
+        .order_by(Programme.sort_order, Programme.date.asc().nullslast(), Programme.title)
     )
     if status:
         stmt = stmt.where(Programme.status == status)
@@ -129,7 +124,7 @@ async def update_programme(db: AsyncSession, programme_id: uuid.UUID, data: Prog
     _apply(
         programme,
         data.model_dump(exclude_unset=True),
-        {"title", "age_group", "description", "benefits", "status", "sort_order"},
+        {"title", "description", "benefits", "status", "sort_order"},
     )
     await db.commit()
     await db.refresh(programme)
@@ -145,7 +140,7 @@ async def public_programmes(db: AsyncSession) -> list[PublicProgramme]:
     rows = await db.scalars(
         select(Programme)
         .where(Programme.status == RecordStatus.ACTIVE)
-        .order_by(Programme.sort_order, Programme.title)
+        .order_by(Programme.sort_order, Programme.date.asc().nullslast(), Programme.title)
     )
     return [PublicProgramme.model_validate(p) for p in rows]
 
@@ -157,68 +152,6 @@ async def public_programme(db: AsyncSession, slug: str) -> PublicProgramme:
     if programme is None:
         raise NotFound("Programme not found", code="PROGRAMME_NOT_FOUND")
     return PublicProgramme.model_validate(programme)
-
-
-# --- events / upcoming ---------------------------------------------------------------------
-
-
-async def list_events(
-    db: AsyncSession, *, status: RecordStatus | None = None, search: str | None = None
-) -> list[EventOut]:
-    stmt = select(Event).order_by(Event.sort_order, Event.date)
-    if status:
-        stmt = stmt.where(Event.status == status)
-    if search:
-        stmt = stmt.where(
-            or_(
-                Event.title.ilike(contains(search)),
-                Event.kind.ilike(contains(search)),
-                Event.place.ilike(contains(search)),
-            )
-        )
-    rows = await db.scalars(stmt)
-    return [EventOut.model_validate(e) for e in rows]
-
-
-async def get_event(db: AsyncSession, event_id: uuid.UUID) -> Event:
-    event = await db.get(Event, event_id)
-    if event is None:
-        raise NotFound("Event not found", code="EVENT_NOT_FOUND")
-    return event
-
-
-async def create_event(db: AsyncSession, data: EventIn) -> EventOut:
-    event = Event(**data.model_dump())
-    db.add(event)
-    await db.commit()
-    await db.refresh(event)
-    return EventOut.model_validate(event)
-
-
-async def update_event(db: AsyncSession, event_id: uuid.UUID, data: EventPatch) -> EventOut:
-    event = await get_event(db, event_id)
-    _apply(
-        event,
-        data.model_dump(exclude_unset=True),
-        {"title", "kind", "date", "place", "status", "sort_order"},
-    )
-    await db.commit()
-    await db.refresh(event)
-    return EventOut.model_validate(event)
-
-
-async def delete_event(db: AsyncSession, event_id: uuid.UUID) -> None:
-    await db.delete(await get_event(db, event_id))
-    await db.commit()
-
-
-async def public_events(db: AsyncSession) -> list[PublicEvent]:
-    rows = await db.scalars(
-        select(Event)
-        .where(Event.status == RecordStatus.ACTIVE)
-        .order_by(Event.sort_order, Event.date)
-    )
-    return [PublicEvent.model_validate(e) for e in rows]
 
 
 # --- team ----------------------------------------------------------------------------------

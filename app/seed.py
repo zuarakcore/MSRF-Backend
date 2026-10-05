@@ -4,7 +4,7 @@ Refuses to run in production. Idempotent: does nothing if categories already exi
 """
 
 import secrets
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -20,7 +20,7 @@ from app.modules.fees import ledger
 from app.modules.reference.models import Category, ProgramType, TrainingCenter
 from app.modules.students.models import Student
 from app.modules.users.models import Role, User
-from app.modules.website.models import Event, Job, JobStatus, Programme, TeamMember
+from app.modules.website.models import Job, JobStatus, Programme, TeamMember
 from app.modules.website.service import slugify
 
 CATEGORIES = [
@@ -62,6 +62,10 @@ PROGRAMMES = [
         "Tue · Thu · Sat",
         "MCFC grassroots staff",
         ["Ball mastery fundamentals", "Fun-first coaching", "Nutrition guidance", "Parent progress reports"],
+        None,
+        None,
+        None,
+        None,
     ),
     (
         "Youth Development Programme",
@@ -71,6 +75,10 @@ PROGRAMMES = [
         "Mon · Wed · Fri · Sun",
         "AJ-accredited coaches",
         ["Position-specific training", "Match exposure", "Video analysis", "Academy scouting pathway"],
+        None,
+        None,
+        None,
+        None,
     ),
     (
         "Elite Residential Training",
@@ -85,6 +93,10 @@ PROGRAMMES = [
             "Argentina exposure trips",
             "Professional trial pathway",
         ],
+        None,
+        None,
+        None,
+        None,
     ),
     (
         "Goalkeeper Academy",
@@ -94,6 +106,10 @@ PROGRAMMES = [
         "Tue · Fri · Sun",
         "Padma Shri Bhramanand S. K. S.",
         ["Shot-stopping technique", "Distribution & sweeping", "Reaction drills", "One-to-one review"],
+        None,
+        None,
+        None,
+        None,
     ),
     (
         "Weekend Batch",
@@ -103,6 +119,10 @@ PROGRAMMES = [
         "Sat · Sun",
         "Academy coaching panel",
         ["School-friendly timing", "Small-sided games", "Skill assessment", "Progress badges"],
+        None,
+        None,
+        None,
+        None,
     ),
     (
         "Performance & Fitness",
@@ -112,6 +132,49 @@ PROGRAMMES = [
         "Mon · Wed · Fri",
         "Sports science team",
         ["Speed & agility blocks", "Injury prevention", "Recovery protocols", "Body composition tracking"],
+        None,
+        None,
+        None,
+        None,
+    ),
+    (
+        "Academy Open Trials",
+        "12 – 18 years",
+        "Open trial day for prospective academy players with coaches evaluating technical skills.",
+        "1 Day",
+        "Morning session",
+        "MCFC Scouting Panel",
+        ["Full pitch drills", "1v1 testing", "Scouting evaluation"],
+        date(2026, 9, 14),
+        "MCFC Academy Ground, Kozhikode",
+        "Trials",
+        "/contact",
+    ),
+    (
+        "Argentinos Juniors Coach Clinic",
+        "Coaches",
+        "Tactical masterclass and coaching clinic conducted by Argentinos Juniors technical staff.",
+        "1 Day",
+        "Afternoon session",
+        "AJ Technical Staff",
+        ["Tactics board analysis", "Methodology handbook", "Practical session drills"],
+        date(2026, 10, 5),
+        "MSRF Training Centre, Keralam",
+        "Workshop",
+        "/contact",
+    ),
+    (
+        "Challengers Youth Cup",
+        "U-15 & U-17",
+        "Annual youth football tournament hosted at Kozhikode District Stadium.",
+        "3 Days",
+        "Tournament Schedule",
+        "Tournament Committee",
+        ["Competitive matches", "Scout coverage", "Trophy presentation"],
+        date(2026, 11, 22),
+        "Kozhikode District Stadium",
+        "Tournament",
+        "/contact",
     ),
 ]
 TEAM = [
@@ -144,29 +207,6 @@ JOBS = [
         "Keralam (Statewide)",
         "Identify talent across district and state level school tournaments.",
         "2+ Years",
-    ),
-]
-EVENTS = [
-    (
-        "Academy Open Trials",
-        "Trials",
-        datetime(2026, 9, 14, 9, 0, tzinfo=UTC),
-        "MCFC Academy Ground, Kozhikode",
-        "/contact",
-    ),
-    (
-        "Argentinos Juniors Coach Clinic",
-        "Workshop",
-        datetime(2026, 10, 5, 16, 0, tzinfo=UTC),
-        "MSRF Training Centre, Keralam",
-        "/contact",
-    ),
-    (
-        "Challengers Youth Cup",
-        "Tournament",
-        datetime(2026, 11, 22, 8, 30, tzinfo=UTC),
-        "Kozhikode District Stadium",
-        "/contact",
     ),
 ]
 
@@ -261,9 +301,13 @@ async def seed(db: AsyncSession) -> list[tuple[str, str, str]]:
             training_days=days,
             coach_label=c,
             benefits=b,
+            date=dt,
+            place=pl,
+            kind=k,
+            registration_url=reg,
             sort_order=i,
         )
-        for i, (t, a, d, du, days, c, b) in enumerate(PROGRAMMES)
+        for i, (t, a, d, du, days, c, b, dt, pl, k, reg) in enumerate(PROGRAMMES)
     )
     db.add_all(
         TeamMember(name=n, designation=d, biography=b, sort_order=i) for i, (n, d, b) in enumerate(TEAM)
@@ -278,17 +322,6 @@ async def seed(db: AsyncSession) -> list[tuple[str, str, str]]:
             status=JobStatus.OPEN,
         )
         for t, loc, d, e in JOBS
-    )
-    db.add_all(
-        Event(
-            title=t,
-            kind=k,
-            date=dt,
-            place=p,
-            registration_url=u,
-            sort_order=i,
-        )
-        for i, (t, k, dt, p, u) in enumerate(EVENTS)
     )
     await db.commit()
     return accounts

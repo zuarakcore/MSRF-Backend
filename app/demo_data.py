@@ -8,7 +8,7 @@ Deterministic (fixed random seed). Sends no email.
 
 import io
 import random
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date, time, timedelta
 from decimal import Decimal
 
 from PIL import Image, ImageDraw
@@ -51,7 +51,6 @@ from app.modules.website.models import (
     ApplicationStatus,
     Enquiry,
     EnquiryStatus,
-    Event,
     GalleryItem,
     Job,
     JobApplication,
@@ -106,29 +105,6 @@ GALLERY = [
     ("Annual awards night", "Events", (120, 40, 120)),
     ("Argentinos Juniors delegation visit", "Argentina", (40, 110, 200)),
     ("Coach clinic with AJ staff", "Argentina", (70, 140, 210)),
-]
-EVENTS = [
-    (
-        "Academy Open Trials",
-        "Trials",
-        datetime(2026, 9, 14, 9, 0, tzinfo=UTC),
-        "MCFC Academy Ground, Kozhikode",
-        "/contact",
-    ),
-    (
-        "Argentinos Juniors Coach Clinic",
-        "Workshop",
-        datetime(2026, 10, 5, 16, 0, tzinfo=UTC),
-        "MSRF Training Centre, Keralam",
-        "/contact",
-    ),
-    (
-        "Challengers Youth Cup",
-        "Tournament",
-        datetime(2026, 11, 22, 8, 30, tzinfo=UTC),
-        "Kozhikode District Stadium",
-        "/contact",
-    ),
 ]
 APPLICANTS = [
     (
@@ -534,21 +510,6 @@ async def seed_activity(db: AsyncSession) -> dict[str, int]:
             )
         )
     stats["enquiries"] = len(ENQUIRIES)
-
-    # --- upcoming events ------------------------------------------------------------------
-    if not await db.scalar(select(Event.id).limit(1)):
-        for i, (t, k, dt, p, u) in enumerate(EVENTS):
-            db.add(
-                Event(
-                    title=t,
-                    kind=k,
-                    date=dt,
-                    place=p,
-                    registration_url=u,
-                    sort_order=i,
-                )
-            )
-    stats["events"] = len(EVENTS)
 
     # --- parent payment submissions -------------------------------------------------------
     pending_students = [s for s in students if s.status is RecordStatus.ACTIVE][:4]

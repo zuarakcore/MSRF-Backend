@@ -30,11 +30,20 @@ async def test_programmes_admin_and_public(client: AsyncClient, make_user: UserF
         "ageGroup": "6 – 10 years",
         "description": "Fun first",
         "benefits": ["Ball mastery", "  ", "Parent reports"],
+        "date": "2026-09-14",
+        "place": "MCFC Academy Ground, Kozhikode",
+        "kind": "Trials",
+        "registrationUrl": "/contact",
     }
     created = await client.post(f"{API}/programmes", json=body, headers=h)
     assert created.status_code == 201
     assert created.json()["slug"] == "grassroots-kids-football"
     assert created.json()["benefits"] == ["Ball mastery", "Parent reports"]
+    assert created.json()["date"] == "2026-09-14"
+    assert created.json()["place"] == "MCFC Academy Ground, Kozhikode"
+    assert created.json()["kind"] == "Trials"
+    assert created.json()["registrationUrl"] == "/contact"
+
     again = await client.post(f"{API}/programmes", json=body, headers=h)
     assert again.json()["slug"] == "grassroots-kids-football-2"
     await client.patch(f"{API}/programmes/{again.json()['id']}", json={"status": "INACTIVE"}, headers=h)
@@ -42,6 +51,10 @@ async def test_programmes_admin_and_public(client: AsyncClient, make_user: UserF
     public = (await client.get(f"{API}/public/programmes")).json()
     assert [p["slug"] for p in public] == ["grassroots-kids-football"]
     assert "status" not in public[0]
+    assert public[0]["date"] == "2026-09-14"
+    assert public[0]["place"] == "MCFC Academy Ground, Kozhikode"
+    assert public[0]["kind"] == "Trials"
+    assert public[0]["registrationUrl"] == "/contact"
     assert (await client.get(f"{API}/public/programmes/grassroots-kids-football-2")).status_code == 404
 
 
@@ -192,46 +205,3 @@ async def test_dashboard_and_search(client: AsyncClient, make_user: UserFactory)
     assert summary.json()["students"] == {"total": 0, "active": 0}
     results = await client.get(f"{API}/search", params={"q": "ad"}, headers=h)
     assert set(results.json()) == {"students", "coaches", "paymentSubmissions", "payments"}
-
-
-async def test_events_admin_and_public(client: AsyncClient, make_user: UserFactory) -> None:
-    h = await _admin(client, make_user)
-    event_data = {
-        "title": "Academy Open Trials",
-        "kind": "Trials",
-        "date": "2026-09-14T09:00:00Z",
-        "place": "MCFC Academy Ground, Kozhikode",
-        "registrationUrl": "/contact",
-    }
-    created = await client.post(f"{API}/events", json=event_data, headers=h)
-    assert created.status_code == 201
-    ev = created.json()
-    assert ev["title"] == "Academy Open Trials"
-    assert ev["kind"] == "Trials"
-    assert "2026-09-14" in ev["date"]
-    assert ev["place"] == "MCFC Academy Ground, Kozhikode"
-
-    # Inactive event
-    inactive_data = {
-        "title": "Past Tournament",
-        "kind": "Tournament",
-        "date": "2026-08-01T08:00:00Z",
-        "place": "Stadium",
-        "status": "INACTIVE",
-    }
-    await client.post(f"{API}/events", json=inactive_data, headers=h)
-
-    # Public events should only show active ones
-    public_res = await client.get(f"{API}/public/events")
-    assert public_res.status_code == 200
-    public_events = public_res.json()
-    assert len(public_events) == 1
-    assert public_events[0]["title"] == "Academy Open Trials"
-    assert public_events[0]["kind"] == "Trials"
-    assert "2026-09-14" in public_events[0]["date"]
-    assert public_events[0]["place"] == "MCFC Academy Ground, Kozhikode"
-
-    # Alias /public/upcoming
-    upcoming_res = await client.get(f"{API}/public/upcoming")
-    assert upcoming_res.status_code == 200
-    assert upcoming_res.json() == public_events

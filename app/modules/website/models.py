@@ -1,9 +1,9 @@
+import datetime as dt
 import uuid
-from datetime import date, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ARRAY, CheckConstraint, Date, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import ARRAY, CheckConstraint, Date, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import CITEXT, INET
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,28 +21,21 @@ class _Publishable:
     sort_order: Mapped[int] = mapped_column(default=0, server_default="0")
 
 
-class Event(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
-    __tablename__ = "events"
-
-    title: Mapped[str] = mapped_column(String(120))
-    kind: Mapped[str] = mapped_column(String(60), default="Event", server_default="Event")
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    place: Mapped[str] = mapped_column(String(200))
-    registration_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-
-
 class Programme(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
     __tablename__ = "programmes"
 
     slug: Mapped[str] = mapped_column(String(140), unique=True)
     title: Mapped[str] = mapped_column(String(120))
-    age_group: Mapped[str] = mapped_column(String(40))
+    age_group: Mapped[str | None] = mapped_column(String(40), nullable=True)
     description: Mapped[str] = mapped_column(String(1000))
     duration: Mapped[str | None] = mapped_column(String(80))
     training_days: Mapped[str | None] = mapped_column(String(80))
     coach_label: Mapped[str | None] = mapped_column(String(80))
     benefits: Mapped[list[str]] = mapped_column(ARRAY(String(120)), default=list, server_default="{}")
+    date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    place: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    kind: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    registration_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class TeamMember(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
@@ -86,8 +79,8 @@ class Job(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     location: Mapped[str] = mapped_column(String(120))
     description: Mapped[str] = mapped_column(Text)
     experience_required: Mapped[str | None] = mapped_column(String(120))
-    posted_on: Mapped[date] = mapped_column(Date)
-    closing_date: Mapped[date | None] = mapped_column(Date)
+    posted_on: Mapped[dt.date] = mapped_column(Date)
+    closing_date: Mapped[dt.date | None] = mapped_column(Date)
     status: Mapped[JobStatus] = mapped_column(pg_enum(JobStatus, "job_status"), default=JobStatus.OPEN)
 
     __table_args__ = (

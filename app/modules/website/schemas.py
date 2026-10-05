@@ -22,6 +22,7 @@ from app.modules.files.schemas import FileRef, Photo
 from app.modules.website.models import ApplicationStatus, EnquiryStatus, JobStatus
 
 Label80 = OptStr80
+dt_date = date
 
 
 # --- programmes ----------------------------------------------------------------------------
@@ -39,24 +40,32 @@ Benefits = Annotated[list[str], AfterValidator(_clean_benefits), Field(max_lengt
 
 class ProgrammeIn(InputModel):
     title: str = Field(min_length=2, max_length=120)
-    age_group: str = Field(min_length=1, max_length=40)
+    age_group: OptStr80 = None
     description: str = Field(min_length=1, max_length=1000)
     duration: Label80 = None
     training_days: Label80 = None
     coach_label: Label80 = None
     benefits: Annotated[Benefits, Field(default_factory=list)]
+    date: dt_date | None = None
+    place: OptionalText300 = None
+    kind: Label80 = None
+    registration_url: OptStr2048 = None
     status: RecordStatus = RecordStatus.ACTIVE
     sort_order: int = Field(default=0, ge=0, le=10_000)
 
 
 class ProgrammePatch(InputModel):
     title: str | None = Field(default=None, min_length=2, max_length=120)
-    age_group: str | None = Field(default=None, min_length=1, max_length=40)
+    age_group: OptStr80 = None
     description: str | None = Field(default=None, min_length=1, max_length=1000)
     duration: Label80 = None
     training_days: Label80 = None
     coach_label: Label80 = None
     benefits: Benefits | None = None
+    date: dt_date | None = None
+    place: OptionalText300 = None
+    kind: Label80 = None
+    registration_url: OptStr2048 = None
     status: RecordStatus | None = None
     sort_order: int | None = Field(default=None, ge=0, le=10_000)
 
@@ -65,12 +74,16 @@ class ProgrammeOut(CamelModel):
     id: uuid.UUID
     slug: str
     title: str
-    age_group: str
+    age_group: str | None = None
     description: str
     duration: str | None
     training_days: str | None
     coach_label: str | None
     benefits: list[str]
+    date: dt_date | None = None
+    place: str | None = None
+    kind: str | None = None
+    registration_url: str | None = None
     status: RecordStatus
     sort_order: int
     enquiries_count: int = 0
@@ -82,61 +95,16 @@ class PublicProgramme(CamelModel):
     id: uuid.UUID
     slug: str
     title: str
-    age_group: str
+    age_group: str | None = None
     description: str
     duration: str | None
     training_days: str | None
     coach_label: str | None
     benefits: list[str]
-
-
-# --- events / upcoming ---------------------------------------------------------------------
-
-
-class EventIn(InputModel):
-    title: str = Field(min_length=2, max_length=120)
-    kind: str = Field(default="Event", min_length=1, max_length=60)
-    date: datetime
-    place: str = Field(min_length=1, max_length=200)
-    registration_url: OptStr2048 = None
-    description: OptionalText500 = None
-    status: RecordStatus = RecordStatus.ACTIVE
-    sort_order: int = Field(default=0, ge=0, le=10_000)
-
-
-class EventPatch(InputModel):
-    title: str | None = Field(default=None, min_length=2, max_length=120)
-    kind: str | None = Field(default=None, min_length=1, max_length=60)
-    date: datetime | None = None
-    place: str | None = Field(default=None, min_length=1, max_length=200)
-    registration_url: OptStr2048 = None
-    description: OptionalText500 = None
-    status: RecordStatus | None = None
-    sort_order: int | None = Field(default=None, ge=0, le=10_000)
-
-
-class EventOut(CamelModel):
-    id: uuid.UUID
-    title: str
-    kind: str
-    date: datetime
-    place: str
-    registration_url: str | None
-    description: str | None
-    status: RecordStatus
-    sort_order: int
-    created_at: datetime
-    updated_at: datetime
-
-
-class PublicEvent(CamelModel):
-    id: uuid.UUID
-    title: str
-    kind: str
-    date: datetime
-    place: str
+    date: dt_date | None = None
+    place: str | None = None
+    kind: str | None = None
     registration_url: str | None = None
-    description: str | None = None
 
 
 class OrderIn(InputModel):
