@@ -21,6 +21,8 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates" / "email"
+LOGO_PATH = Path(__file__).resolve().parent.parent / "static" / "email-logo.png"
+LOGO_CID = "msrf-logo"
 
 # Messages "sent" with EMAIL_BACKEND=memory (tests).
 outbox: list["OutgoingEmail"] = []
@@ -73,6 +75,11 @@ def deliver(message: OutgoingEmail) -> None:
     mime["Message-ID"] = make_msgid(domain=settings.SMTP_FROM_EMAIL.rsplit("@", 1)[-1])
     mime.set_content(message.text)
     mime.add_alternative(message.html, subtype="html")
+    if f"cid:{LOGO_CID}" in message.html and LOGO_PATH.exists():
+        # Inline (related) image: email clients show it without loading anything from our server.
+        for part in mime.iter_parts():
+            if part.get_content_type() == "text/html":
+                part.add_related(LOGO_PATH.read_bytes(), maintype="image", subtype="png", cid=f"<{LOGO_CID}>")
 
     context = ssl.create_default_context()
     smtp_cls = smtplib.SMTP_SSL if settings.SMTP_USE_SSL else smtplib.SMTP
