@@ -16,6 +16,9 @@ class Role(StrEnum):
 class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "users"
 
+    def __str__(self) -> str:
+        return f"{self.full_name} <{self.email}>"
+
     email: Mapped[str] = mapped_column(CITEXT, unique=True)
     # NULL until a coach accepts their invite and sets a password.
     password_hash: Mapped[str | None] = mapped_column(String(255))

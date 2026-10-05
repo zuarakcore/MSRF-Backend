@@ -1,0 +1,69 @@
+{% extends "sqladmin/layout.html" %}
+{% block content %}
+<div class="page-header mb-3">
+  <h2 class="page-title">Overview</h2>
+  <div class="text-secondary">{{ subtitle }}</div>
+</div>
+
+<div class="row row-deck row-cards">
+  {% for label, value, link, colour, icon in cards %}
+  <div class="col-sm-6 col-lg-4">
+    <a class="card card-sm card-link text-reset text-decoration-none" href="{{ link }}">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-auto">
+            <span class="bg-{{ colour }} text-white avatar"><i class="fa-solid {{ icon }}"></i></span>
+          </div>
+          <div class="col">
+            <div class="h2 mb-0">{{ value }}</div>
+            <div class="text-secondary">{{ label }}</div>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Latest payments</h3>
+        <div class="card-actions"><a href="{{ payments_url }}">View all</a></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+          <thead><tr><th>Receipt</th><th>Student</th><th>Amount</th><th>Paid on</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for receipt, student, amount, paid_on, status in payments %}
+            <tr><td>{{ receipt }}</td><td>{{ student }}</td><td>{{ amount }}</td><td>{{ paid_on }}</td><td>{{ status }}</td></tr>
+            {% else %}
+            <tr><td colspan="5" class="text-secondary">No payments yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Latest enquiries</h3>
+        <div class="card-actions"><a href="{{ enquiries_url }}">View all</a></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+          <thead><tr><th>Received</th><th>Parent</th><th>Programme</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for received, parent, programme, status in enquiries %}
+            <tr><td>{{ received }}</td><td>{{ parent }}</td><td>{{ programme }}</td><td>{{ status }}</td></tr>
+            {% else %}
+            <tr><td colspan="4" class="text-secondary">No enquiries yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

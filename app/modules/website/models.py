@@ -24,6 +24,9 @@ class _Publishable:
 class Programme(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
     __tablename__ = "programmes"
 
+    def __str__(self) -> str:
+        return self.title
+
     slug: Mapped[str] = mapped_column(String(140), unique=True)
     title: Mapped[str] = mapped_column(String(120))
     age_group: Mapped[str | None] = mapped_column(String(40), nullable=True)
@@ -41,6 +44,9 @@ class Programme(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
 class TeamMember(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
     __tablename__ = "team_members"
 
+    def __str__(self) -> str:
+        return self.name
+
     name: Mapped[str] = mapped_column(String(120))
     designation: Mapped[str] = mapped_column(String(60))
     biography: Mapped[str | None] = mapped_column(String(500))
@@ -53,6 +59,9 @@ class TeamMember(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
 
 class GalleryItem(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
     __tablename__ = "gallery_items"
+
+    def __str__(self) -> str:
+        return self.title
 
     title: Mapped[str] = mapped_column(String(120))
     caption: Mapped[str | None] = mapped_column(String(300))
@@ -75,6 +84,9 @@ class JobStatus(StrEnum):
 class Job(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "jobs"
 
+    def __str__(self) -> str:
+        return self.title
+
     title: Mapped[str] = mapped_column(String(120))
     location: Mapped[str] = mapped_column(String(120))
     description: Mapped[str] = mapped_column(Text)
@@ -96,6 +108,9 @@ class ApplicationStatus(StrEnum):
 
 class JobApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "job_applications"
+
+    def __str__(self) -> str:
+        return f"{self.full_name} → {self.job.title}"
 
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id", ondelete="RESTRICT"), index=True)
     full_name: Mapped[str] = mapped_column(String(120))
@@ -126,6 +141,9 @@ class EnquiryStatus(StrEnum):
 
 class Enquiry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "enquiries"
+
+    def __str__(self) -> str:
+        return f"Enquiry from {self.parent_name}"
 
     parent_name: Mapped[str] = mapped_column(String(120))
     player_name: Mapped[str | None] = mapped_column(String(120))

@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 class Student(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "students"
 
+    def __str__(self) -> str:
+        return f"{self.full_name} ({self.student_code})"
+
     student_code: Mapped[str] = mapped_column(String(20), unique=True)
     admission_number: Mapped[str] = mapped_column(String(30), unique=True)
     admission_date: Mapped[date] = mapped_column(Date)
@@ -88,6 +91,9 @@ class Student(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class StudentDocument(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     __tablename__ = "student_documents"
+
+    def __str__(self) -> str:
+        return self.title
 
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), index=True)
     file_id: Mapped[uuid.UUID] = mapped_column(

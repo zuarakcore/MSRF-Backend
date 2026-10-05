@@ -31,6 +31,9 @@ class FeeLedgerEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "fee_ledger_entries"
 
+    def __str__(self) -> str:
+        return f"Fees for {self.period:%B %Y}"
+
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"))
     period: Mapped[date] = mapped_column(Date)  # first day of the month
     amount_due: Mapped[Decimal] = mapped_column(Money)
@@ -74,6 +77,9 @@ class Payment(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     """Money received. Never edited or deleted; corrections are voids."""
 
     __tablename__ = "payments"
+
+    def __str__(self) -> str:
+        return f"Receipt {self.receipt_number}"
 
     receipt_number: Mapped[str] = mapped_column(String(30), unique=True)
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"), index=True)

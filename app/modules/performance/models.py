@@ -81,6 +81,9 @@ class StrongFoot(StrEnum):
 class PerformanceReport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "performance_reports"
 
+    def __str__(self) -> str:
+        return self.report_period
+
     student_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("students.id", ondelete="RESTRICT"), index=True)
     coach_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("coach_profiles.id", ondelete="RESTRICT"), index=True

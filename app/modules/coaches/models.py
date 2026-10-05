@@ -27,6 +27,9 @@ class CoachProfile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "coach_profiles"
 
+    def __str__(self) -> str:
+        return f"Coach {self.user.full_name}"
+
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     phone: Mapped[str] = mapped_column(String(10))
     gender: Mapped[Gender | None] = mapped_column(pg_enum(Gender, "gender"))
@@ -57,6 +60,9 @@ class DocumentKind(StrEnum):
 
 class CoachDocument(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     __tablename__ = "coach_documents"
+
+    def __str__(self) -> str:
+        return self.title
 
     coach_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("coach_profiles.id", ondelete="CASCADE"), index=True

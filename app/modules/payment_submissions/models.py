@@ -32,6 +32,9 @@ class PaymentSubmission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "payment_submissions"
 
+    def __str__(self) -> str:
+        return f"Submission {self.submission_number}"
+
     submission_number: Mapped[str] = mapped_column(String(20), unique=True)
     student_name: Mapped[str] = mapped_column(String(120))
     parent_mobile: Mapped[str] = mapped_column(String(10), index=True)

@@ -39,6 +39,9 @@ class TrainingSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "training_sessions"
 
+    def __str__(self) -> str:
+        return f"{self.session_date:%d %b %Y} · {self.daily_topic}"
+
     session_date: Mapped[date] = mapped_column(Date, index=True)
     created_by_coach_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("coach_profiles.id", ondelete="RESTRICT"), index=True

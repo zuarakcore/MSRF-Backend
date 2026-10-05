@@ -19,18 +19,30 @@ class Category(ReferenceBase):
     """Student group, e.g. "Youth Football Squad (U-13)". Drives rosters and coach scope."""
 
     __tablename__ = "categories"
+
+    def __str__(self) -> str:
+        return self.name
+
     description: Mapped[str | None] = mapped_column(String(500))
     __table_args__ = (Index("uq_categories_name_lower", text("lower(name)"), unique=True),)
 
 
 class ProgramType(ReferenceBase):
     __tablename__ = "program_types"
+
+    def __str__(self) -> str:
+        return self.name
+
     description: Mapped[str | None] = mapped_column(String(500))
     __table_args__ = (Index("uq_program_types_name_lower", text("lower(name)"), unique=True),)
 
 
 class TrainingCenter(ReferenceBase):
     __tablename__ = "training_centers"
+
+    def __str__(self) -> str:
+        return self.name
+
     location: Mapped[str] = mapped_column(String(300))
     phone: Mapped[str | None] = mapped_column(String(10))
     __table_args__ = (Index("uq_training_centers_name_lower", text("lower(name)"), unique=True),)

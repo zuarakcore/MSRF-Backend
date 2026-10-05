@@ -73,6 +73,9 @@ GENERIC_UPLOAD_PURPOSES = frozenset(
 class StoredFile(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     __tablename__ = "stored_files"
 
+    def __str__(self) -> str:
+        return self.original_filename
+
     storage_key: Mapped[str] = mapped_column(String(300), unique=True)
     visibility: Mapped[Visibility] = mapped_column(pg_enum(Visibility, "file_visibility"))
     purpose: Mapped[FilePurpose] = mapped_column(pg_enum(FilePurpose, "file_purpose"))

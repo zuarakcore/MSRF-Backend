@@ -80,3 +80,23 @@ async def test_every_admin_page_renders(committed: dict[str, Any]) -> None:
         assert (await client.get("/admin/payment/create")).status_code in (403, 404)  # read-only section
     finally:
         await client.aclose()
+
+
+async def test_overview_and_readable_lists(committed: dict[str, Any]) -> None:
+    client, _ = await _panel("boss@example.com", DEFAULT_PASSWORD)
+    try:
+        home = (await client.get("/admin/")).text
+        assert "Active students" in home and "Payments to verify" in home and "Collected this month" in home
+
+        students = (await client.get("/admin/student/list")).text
+        assert "Student ID" in students and "Monthly fee" in students  # human column labels
+        assert 'class="badge bg-green-lt">Active<' in students  # status badge, not "ACTIVE"
+        assert "₹" in students  # money formatted as rupees
+
+        coaches = (await client.get("/admin/coach-profile/list")).text
+        assert committed["coach_email"] in coaches and "<User " not in coaches  # related rows by name
+
+        assert "Panel Test Student" in (await client.get("/admin/student/list?status=ACTIVE")).text
+        assert "Panel Test Student" not in (await client.get("/admin/student/list?status=INACTIVE")).text
+    finally:
+        await client.aclose()
