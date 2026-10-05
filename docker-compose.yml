@@ -1,0 +1,62 @@
+# Local development stack:  docker compose up -d
+# API http://localhost:8000/api/docs   Mailpit http://localhost:8025
+x-app: &app
+  build: .
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+asyncpg://msrf:msrf@postgres:5432/msrf
+    DATABASE_URL_SYNC: postgresql+psycopg://msrf:msrf@postgres:5432/msrf
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+    CELERY_TASK_ALWAYS_EAGER: "false"
+    EMAIL_BACKEND: smtp
+    SMTP_HOST: mailpit
+    SMTP_PORT: "1025"
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: msrf
+      POSTGRES_PASSWORD: msrf
+      POSTGRES_DB: msrf
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msrf"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025", "1025:1025"]
+
+  api:
+    <<: *app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports: ["8000:8000"]
+    volumes: ["./app:/app/app", "./alembic:/app/alembic", "media:/app/media"]
+
+  worker:
+    <<: *app
+    command: celery -A app.tasks.celery_app worker -l info
+    volumes: ["media:/app/media"]
+
+  beat:  # exactly one instance
+    <<: *app
+    command: celery -A app.tasks.celery_app beat -l info -s /tmp/celerybeat-schedule
+
+volumes:
+  pgdata:
+  media:

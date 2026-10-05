@@ -1,0 +1,38 @@
+# Tool configuration only. Dependencies live in requirements*.txt.
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF"]
+ignore = ["S101", "B008"]  # assert in tests; FastAPI Depends() in defaults
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "RUF001"]  # test passwords; en dashes match website data
+"alembic/versions/**" = ["E501", "W291"]  # generated files
+"app/seed.py" = ["RUF001"]  # en dashes match the website copy
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/", "tests/"]
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "limits.*", "boto3.*", "filetype.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+filterwarnings = [
+    "error::DeprecationWarning:app.*",
+    "error:coroutine .* was never awaited:RuntimeWarning",
+]
+
+[[tool.mypy.overrides]]
+module = ["app.tasks.*"]
+disallow_untyped_decorators = false  # Celery's @task decorator has no type hints

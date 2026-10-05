@@ -1,0 +1,22 @@
+# Runtime dependencies (pinned). Regenerate with: uv pip compile / pip freeze after deliberate upgrades.
+alembic==1.20.0
+asyncpg==0.31.0
+boto3==1.43.108
+celery==5.6.3
+email-validator==2.3.0
+fastapi==0.142.2
+filetype==1.2.0
+httpx==0.28.1
+jinja2==3.1.6
+limits==5.8.0
+pillow==12.3.0
+psycopg[binary]==3.3.6
+pwdlib[argon2]==0.3.1
+pydantic==2.13.5
+pydantic-settings==2.15.0
+pyjwt==2.15.1
+python-multipart==0.0.32
+redis==8.1.0
+sqlalchemy[asyncio]==2.1.3
+typer==0.27.2
+uvicorn[standard]==0.54.0

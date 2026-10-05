@@ -1,0 +1,6 @@
+Hello,
+
+Thank you for contacting {{ app_name }} about {{ subject }}.
+Our team will get back to you shortly, usually within one working day.
+
+Office hours: Monday – Saturday, 10:00 AM – 5:00 PM.

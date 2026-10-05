@@ -1,0 +1,1 @@
+You're invited to the {{ app_name }} coach portal

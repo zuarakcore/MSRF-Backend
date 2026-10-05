@@ -1,0 +1,10 @@
+Hello {{ full_name }},
+
+An account has been created for you on the {{ app_name }} coach portal.
+Your login email is: {{ email }}
+
+Open this link to set your password:
+
+{{ link }}
+
+The link expires in {{ expires_hours }} hours. Ask the academy office for a new one if it expires.
