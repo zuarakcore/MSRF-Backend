@@ -1,9 +1,9 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ARRAY, CheckConstraint, Date, ForeignKey, Index, String, Text
+from sqlalchemy import ARRAY, CheckConstraint, Date, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import CITEXT, INET
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +19,17 @@ class _Publishable:
         pg_enum(RecordStatus, "record_status"), default=RecordStatus.ACTIVE, server_default="ACTIVE"
     )
     sort_order: Mapped[int] = mapped_column(default=0, server_default="0")
+
+
+class Event(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):
+    __tablename__ = "events"
+
+    title: Mapped[str] = mapped_column(String(120))
+    kind: Mapped[str] = mapped_column(String(60), default="Event", server_default="Event")
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    place: Mapped[str] = mapped_column(String(200))
+    registration_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
 
 class Programme(UUIDPrimaryKeyMixin, TimestampMixin, _Publishable, Base):

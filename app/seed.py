@@ -4,7 +4,7 @@ Refuses to run in production. Idempotent: does nothing if categories already exi
 """
 
 import secrets
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -20,7 +20,7 @@ from app.modules.fees import ledger
 from app.modules.reference.models import Category, ProgramType, TrainingCenter
 from app.modules.students.models import Student
 from app.modules.users.models import Role, User
-from app.modules.website.models import Job, JobStatus, Programme, TeamMember
+from app.modules.website.models import Event, Job, JobStatus, Programme, TeamMember
 from app.modules.website.service import slugify
 
 CATEGORIES = [
@@ -146,6 +146,29 @@ JOBS = [
         "2+ Years",
     ),
 ]
+EVENTS = [
+    (
+        "Academy Open Trials",
+        "Trials",
+        datetime(2026, 9, 14, 9, 0, tzinfo=UTC),
+        "MCFC Academy Ground, Kozhikode",
+        "/contact",
+    ),
+    (
+        "Argentinos Juniors Coach Clinic",
+        "Workshop",
+        datetime(2026, 10, 5, 16, 0, tzinfo=UTC),
+        "MSRF Training Centre, Keralam",
+        "/contact",
+    ),
+    (
+        "Challengers Youth Cup",
+        "Tournament",
+        datetime(2026, 11, 22, 8, 30, tzinfo=UTC),
+        "Kozhikode District Stadium",
+        "/contact",
+    ),
+]
 
 
 async def seed(db: AsyncSession) -> list[tuple[str, str, str]]:
@@ -255,6 +278,17 @@ async def seed(db: AsyncSession) -> list[tuple[str, str, str]]:
             status=JobStatus.OPEN,
         )
         for t, loc, d, e in JOBS
+    )
+    db.add_all(
+        Event(
+            title=t,
+            kind=k,
+            date=dt,
+            place=p,
+            registration_url=u,
+            sort_order=i,
+        )
+        for i, (t, k, dt, p, u) in enumerate(EVENTS)
     )
     await db.commit()
     return accounts

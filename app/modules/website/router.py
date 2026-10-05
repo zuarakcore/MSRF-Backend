@@ -13,6 +13,7 @@ from app.modules.website import service
 from app.modules.website.models import (
     ApplicationStatus,
     EnquiryStatus,
+    Event,
     GalleryItem,
     JobStatus,
     Programme,
@@ -25,6 +26,9 @@ from app.modules.website.schemas import (
     EnquiryIn,
     EnquiryOut,
     EnquiryPatch,
+    EventIn,
+    EventOut,
+    EventPatch,
     GalleryItemOut,
     GalleryPatch,
     JobIn,
@@ -34,6 +38,7 @@ from app.modules.website.schemas import (
     ProgrammeIn,
     ProgrammeOut,
     ProgrammePatch,
+    PublicEvent,
     PublicGalleryItem,
     PublicJob,
     PublicProgramme,
@@ -84,6 +89,38 @@ async def update_programme(programme_id: uuid.UUID, body: ProgrammePatch, db: Db
 @admin.delete("/programmes/{programme_id}", status_code=NO_CONTENT, summary="Delete a programme")
 async def delete_programme(programme_id: uuid.UUID, db: DbSession) -> Response:
     await service.delete_programme(db, programme_id)
+    return _no_content()
+
+
+# --- events / upcoming ---------------------------------------------------------------------
+
+
+@admin.get("/events", response_model=list[EventOut], summary="List events (admin)")
+async def list_events(
+    db: DbSession, status_filter: StatusQ = None, search: Search = None
+) -> list[EventOut]:
+    return await service.list_events(db, status=status_filter, search=search)
+
+
+@admin.post("/events", response_model=EventOut, status_code=CREATED, summary="Create an event")
+async def create_event(body: EventIn, db: DbSession) -> EventOut:
+    return await service.create_event(db, body)
+
+
+@admin.put("/events/order", status_code=NO_CONTENT, summary="Set event display order (ids in order)")
+async def order_events(body: OrderIn, db: DbSession) -> Response:
+    await service.reorder(db, Event, body.ids)
+    return _no_content()
+
+
+@admin.patch("/events/{event_id}", response_model=EventOut, summary="Update an event")
+async def update_event(event_id: uuid.UUID, body: EventPatch, db: DbSession) -> EventOut:
+    return await service.update_event(db, event_id, body)
+
+
+@admin.delete("/events/{event_id}", status_code=NO_CONTENT, summary="Delete an event")
+async def delete_event(event_id: uuid.UUID, db: DbSession) -> Response:
+    await service.delete_event(db, event_id)
     return _no_content()
 
 
@@ -307,6 +344,16 @@ async def public_programmes(db: DbSession) -> list[PublicProgramme]:
 @public.get("/programmes/{slug}", response_model=PublicProgramme, summary="One programme by slug")
 async def public_programme(slug: Annotated[str, Path(max_length=140)], db: DbSession) -> PublicProgramme:
     return await service.public_programme(db, slug)
+
+
+@public.get("/events", response_model=list[PublicEvent], summary="Active upcoming events")
+async def public_events(db: DbSession) -> list[PublicEvent]:
+    return await service.public_events(db)
+
+
+@public.get("/upcoming", response_model=list[PublicEvent], summary="Active upcoming events (alias)")
+async def public_upcoming(db: DbSession) -> list[PublicEvent]:
+    return await service.public_events(db)
 
 
 @public.get("/team-members", response_model=list[PublicTeamMember], summary="Leadership")

@@ -90,6 +90,55 @@ class PublicProgramme(CamelModel):
     benefits: list[str]
 
 
+# --- events / upcoming ---------------------------------------------------------------------
+
+
+class EventIn(InputModel):
+    title: str = Field(min_length=2, max_length=120)
+    kind: str = Field(default="Event", min_length=1, max_length=60)
+    date: datetime
+    place: str = Field(min_length=1, max_length=200)
+    registration_url: OptStr2048 = None
+    description: OptionalText500 = None
+    status: RecordStatus = RecordStatus.ACTIVE
+    sort_order: int = Field(default=0, ge=0, le=10_000)
+
+
+class EventPatch(InputModel):
+    title: str | None = Field(default=None, min_length=2, max_length=120)
+    kind: str | None = Field(default=None, min_length=1, max_length=60)
+    date: datetime | None = None
+    place: str | None = Field(default=None, min_length=1, max_length=200)
+    registration_url: OptStr2048 = None
+    description: OptionalText500 = None
+    status: RecordStatus | None = None
+    sort_order: int | None = Field(default=None, ge=0, le=10_000)
+
+
+class EventOut(CamelModel):
+    id: uuid.UUID
+    title: str
+    kind: str
+    date: datetime
+    place: str
+    registration_url: str | None
+    description: str | None
+    status: RecordStatus
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class PublicEvent(CamelModel):
+    id: uuid.UUID
+    title: str
+    kind: str
+    date: datetime
+    place: str
+    registration_url: str | None = None
+    description: str | None = None
+
+
 class OrderIn(InputModel):
     ids: Annotated[list[uuid.UUID], Field(min_length=1, max_length=500)]
 
