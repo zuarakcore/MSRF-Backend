@@ -23,6 +23,10 @@ celery_app.conf.update(
     task_acks_late=True,  # a task lost mid-run (worker crash) is redelivered
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
+    # Threads, not the default prefork pool: prefork crashes on macOS with Python 3.12
+    # ("not enough values to unpack" in fast_trace_task) and our tasks are I/O-bound (SMTP, DB).
+    worker_pool="threads",
+    worker_concurrency=4,
     task_time_limit=60,
     task_soft_time_limit=50,
     timezone=settings.TIMEZONE,

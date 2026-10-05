@@ -38,3 +38,10 @@ def test_safe_production_settings_load() -> None:
 def test_unsafe_production_settings_refused(override: dict[str, object], message: str) -> None:
     with pytest.raises(ValidationError, match=message):
         _settings(**override)
+
+
+def test_celery_uses_thread_pool() -> None:
+    """The default prefork pool crashes on macOS (Python 3.12) and silently drops every email."""
+    from app.tasks.celery_app import celery_app
+
+    assert celery_app.conf.worker_pool == "threads"

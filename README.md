@@ -57,7 +57,7 @@ With `CELERY_TASK_ALWAYS_EAGER=true` you can skip the worker: tasks such as emai
 ```bash
 mkdir -p logs
 nohup .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --reload-dir app > logs/api.log 2>&1 &
-nohup .venv/bin/celery -A app.tasks.celery_app worker -l info --concurrency 2 > logs/worker.log 2>&1 &
+nohup .venv/bin/celery -A app.tasks.celery_app worker -l info > logs/worker.log 2>&1 &
 nohup .venv/bin/celery -A app.tasks.celery_app beat -l info -s logs/celerybeat-schedule > logs/beat.log 2>&1 &
 # stop:
 pkill -f "uvicorn app.main:app"; pkill -f "celery -A app.tasks.celery_app"
