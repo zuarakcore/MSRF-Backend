@@ -89,12 +89,18 @@ def create_app() -> FastAPI:
     app.add_middleware(
         RequestContextMiddleware,
         hsts=settings.is_production,
-        docs_paths=("/api/docs", "/api/redoc", "/api/openapi.json"),
+        # Pages that render HTML (API docs, admin panel) get their own CSP instead of the strict API one.
+        docs_paths=("/api/docs", "/api/redoc", "/api/openapi.json", "/admin"),
         embeddable_paths=("/media/", "/static/", f"{settings.API_PREFIX}/files/"),
         allow_private_network=not settings.is_production,
     )
 
     app.include_router(api_router, prefix=settings.API_PREFIX)
+
+    if settings.ADMIN_PANEL_ENABLED:
+        from app.admin_site import mount_admin
+
+        mount_admin(app)
 
     # Built-in assets shipped with the code (the default placeholder image).
     app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")

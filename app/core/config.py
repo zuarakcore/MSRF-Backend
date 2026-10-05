@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     ADMIN_APP_URL: str = "http://localhost:5173"
 
     RATE_LIMIT_ENABLED: bool = True
+    # Django-admin-style back office at /admin (SQLAdmin). ADMIN accounts only.
+    ADMIN_PANEL_ENABLED: bool = True
     # Outer cap on any request body (largest upload is 10 MB plus multipart overhead).
     MAX_REQUEST_BYTES: int = 12 * 1024 * 1024
 

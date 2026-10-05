@@ -12,6 +12,7 @@ ignore = ["S101", "B008"]  # assert in tests; FastAPI Depends() in defaults
 "tests/**" = ["S105", "S106", "RUF001"]  # test passwords; en dashes match website data
 "alembic/versions/**" = ["E501", "W291"]  # generated files
 "app/seed.py" = ["RUF001"]  # en dashes match the website copy
+"app/admin_site.py" = ["RUF012", "E501"]  # SQLAdmin views are configured with list class attributes
 
 [tool.mypy]
 python_version = "3.12"

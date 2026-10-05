@@ -76,6 +76,15 @@ docker compose exec api alembic upgrade head
 docker compose exec api python -m app.cli create-admin --email you@example.com --name "Your Name"
 ```
 
+## Admin panel (Django-admin style)
+
+`http://localhost:8000/admin`, built with [SQLAdmin](https://aminalaee.dev/sqladmin/). Sign in with an **ADMIN** account (coaches are refused).
+
+- Editable: students, coaches, categories, program types, training centers, programmes, team, gallery text, jobs, enquiry/application status, users (name, active flag).
+- Read-only: payments, fee ledger, submissions, sessions, attendance, performance reports, notifications, audit log, files. Those changes carry business rules (receipts, ledger maths, 7-day locks, emails), so they go through the API / admin app.
+- Creating students, coaches and gallery photos also goes through the API (codes, credential emails, image processing).
+- Views live in `app/admin_site.py` (one `ModelView` per model, like Django's `ModelAdmin`). Disable with `ADMIN_PANEL_ENABLED=false`.
+
 ## CLI
 
 ```bash
