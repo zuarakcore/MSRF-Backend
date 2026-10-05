@@ -103,6 +103,12 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    @field_validator("TRUSTED_HOSTS", mode="after")
+    @classmethod
+    def _lowercase_hosts(cls, value: list[str]) -> list[str]:
+        # Host names are case-insensitive and browsers send them lowercased.
+        return [host.lower() for host in value]
+
     def origin_allowed(self, origin: str) -> bool:
         if origin in self.CORS_ORIGINS:
             return True

@@ -72,6 +72,10 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
 
     # Starlette runs middleware in reverse order of addition: the last added is outermost.
+    # Host and body-size checks sit *inside* CORS, so their 400/413 responses still carry CORS
+    # headers and the browser shows the real error instead of a misleading "CORS error".
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS)
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.MAX_REQUEST_BYTES)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
@@ -82,8 +86,6 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID", "Retry-After", "Content-Disposition"],
         max_age=600,
     )
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS)
-    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.MAX_REQUEST_BYTES)
     app.add_middleware(
         RequestContextMiddleware,
         hsts=settings.is_production,

@@ -85,3 +85,18 @@ async def test_dev_origin_regex_allows_lan_frontends(client: AsyncClient, monkey
             headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
         )
         assert "access-control-allow-origin" not in blocked.headers
+
+
+async def test_host_check_is_case_insensitive() -> None:
+    from app.core.config import Settings
+
+    settings = Settings(_env_file=None, TRUSTED_HOSTS="localhost,JRs-MacBook-Air.local")  # type: ignore[call-arg]
+    assert settings.TRUSTED_HOSTS == ["localhost", "jrs-macbook-air.local"]
+
+
+async def test_rejected_host_response_still_has_cors_headers() -> None:
+    """A 400 from the host check must not surface in the browser as a misleading CORS error."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="https://evil.example") as ac:
+        response = await ac.get("/api/v1/health/live", headers={"Origin": ALLOWED_ORIGIN})
+    assert response.status_code == 400
+    assert response.headers["access-control-allow-origin"] == ALLOWED_ORIGIN
