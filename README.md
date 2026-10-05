@@ -106,6 +106,17 @@ python -m app.cli generate-ledger                     # create this month's fee 
 
 `tests/integration/test_authorization.py` reads the OpenAPI schema and asserts that every non-public route rejects anonymous requests, so new routes are covered automatically.
 
+## Performance benchmark
+
+```bash
+createdb -O msrf msrf_perf
+DATABASE_URL=postgresql+asyncpg://msrf:msrf@localhost:5432/msrf_perf .venv/bin/alembic upgrade head
+psql -U msrf -d msrf_perf -f scripts/seed_perf.sql          # 5k students, 412k attendance rows, 60k ledger months
+DATABASE_URL=postgresql+asyncpg://msrf:msrf@localhost:5432/msrf_perf .venv/bin/python -m scripts.benchmark_queries
+```
+
+Prints SQL statements and median latency for every GET endpoint. Query counts must not grow with page size (no N+1).
+
 ## Migrations
 
 ```bash

@@ -40,7 +40,8 @@ class FeeLedgerEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     amount_paid: Mapped[Decimal] = mapped_column(Money, default=Decimal(0), server_default="0")
     due_date: Mapped[date] = mapped_column(Date)
 
-    student: Mapped["Student"] = relationship(lazy="selectin")
+    # Not auto-loaded: ledger entries are read in bulk (payments, reports) where the student is already known.
+    student: Mapped["Student"] = relationship(lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("student_id", "period", name="uq_fee_ledger_entries_student_period"),

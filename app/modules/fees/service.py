@@ -101,6 +101,22 @@ def payment_out(p: Payment) -> PaymentOut:
 # --- ledger views ------------------------------------------------------------------------
 
 
+def _student_filters[S: Select[Any]](stmt: S, *, category_id: uuid.UUID | None, search: str | None) -> S:
+    if category_id:
+        stmt = stmt.where(Student.category_id == category_id)
+    if search:
+        like = contains(search)
+        stmt = stmt.where(
+            or_(
+                Student.full_name.ilike(like),
+                Student.student_code.ilike(like),
+                Student.parent_name.ilike(like),
+                Student.parent_phone.like(like),
+            )
+        )
+    return stmt
+
+
 def _ledger_query(
     *,
     year: int,
@@ -129,18 +145,7 @@ def _ledger_query(
         .group_by(Student.id)
         .order_by(Student.full_name)
     )
-    if category_id:
-        stmt = stmt.where(Student.category_id == category_id)
-    if search:
-        like = contains(search)
-        stmt = stmt.where(
-            or_(
-                Student.full_name.ilike(like),
-                Student.student_code.ilike(like),
-                Student.parent_name.ilike(like),
-                Student.parent_phone.like(like),
-            )
-        )
+    stmt = _student_filters(stmt, category_id=category_id, search=search)
     if status == "PAID":
         stmt = stmt.having(paid + disc >= due)
     elif status == "OVERDUE":
@@ -176,8 +181,25 @@ def _check_period(year: int, month: int | None) -> None:
 async def ledger_rows(db: AsyncSession, params: PageParams, **filters: Any) -> tuple[list[LedgerRow], int]:
     _check_period(filters["year"], filters.get("month"))
     stmt = _ledger_query(**filters)
-    total = await db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
-    rows = (await db.execute(stmt.limit(params.page_size).offset(params.offset))).all()
+    if filters.get("status") is None:
+        # Fast path: page the students first (cheap), then aggregate only their ledger entries.
+        e = FeeLedgerEntry
+        start, end = period_bounds(filters["year"], filters.get("month"))
+        page_q = _student_filters(
+            select(Student.id)
+            .where(select(e.id).where(e.student_id == Student.id, e.period >= start, e.period < end).exists())
+            .order_by(Student.full_name, Student.id),
+            category_id=filters.get("category_id"),
+            search=filters.get("search"),
+        )
+        total = await db.scalar(select(func.count()).select_from(page_q.order_by(None).subquery())) or 0
+        ids = list(await db.scalars(page_q.limit(params.page_size).offset(params.offset)))
+        by_id = {r[0].id: r for r in (await db.execute(stmt.where(Student.id.in_(ids)))).all()} if ids else {}
+        rows = [by_id[i] for i in ids if i in by_id]
+    else:
+        # A status filter depends on every student's totals, so aggregate first, then page.
+        total = await db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+        rows = list((await db.execute(stmt.limit(params.page_size).offset(params.offset))).all())
     last = await _last_payments(db, [r[0].id for r in rows])
     items = [
         LedgerRow(

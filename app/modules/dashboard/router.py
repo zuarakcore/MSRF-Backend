@@ -1,8 +1,9 @@
 """Admin dashboard aggregates and global search (read-only)."""
 
 import uuid
+from datetime import date
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_, select
@@ -73,8 +74,8 @@ class DashboardSummary(CamelModel):
     top_overdue: list[LedgerRow]
 
 
-async def _count(db: DbSession, *where: object, model: object) -> int:
-    return await db.scalar(select(func.count()).select_from(model).where(*where)) or 0  # type: ignore[arg-type]
+def _count(model: Any, *where: Any) -> Any:
+    return select(func.count()).select_from(model).where(*where).scalar_subquery()
 
 
 @router.get(
@@ -86,27 +87,62 @@ async def summary(db: DbSession) -> DashboardSummary:
     year_from, year_to = period_bounds(today.year)
     e = FeeLedgerEntry
 
-    async def collected(start: object, end: object) -> Decimal:
-        value = await db.scalar(
-            select(func.coalesce(func.sum(Payment.amount), 0)).where(
-                Payment.status == PaymentStatus.VALID, Payment.paid_on >= start, Payment.paid_on < end
-            )
+    def collected(start: date, end: date) -> Any:
+        return (
+            select(func.coalesce(func.sum(Payment.amount), 0))
+            .where(Payment.status == PaymentStatus.VALID, Payment.paid_on >= start, Payment.paid_on < end)
+            .scalar_subquery()
         )
-        return Decimal(value or 0)
 
-    outstanding = await db.scalar(
-        select(func.coalesce(func.sum(func.greatest(e.amount_due - e.discount - e.amount_paid, 0)), 0)).where(
-            e.period <= month_start(today)
-        )
-    )
-    overdue_students = (
-        await db.scalar(
-            select(func.count(func.distinct(e.student_id))).where(
-                e.amount_paid + e.discount < e.amount_due, e.due_date < today
+    # Every counter and total in ONE round trip (each is a scalar subquery).
+    figures = (
+        await db.execute(
+            select(
+                _count(Student),
+                _count(Student, Student.status == RecordStatus.ACTIVE),
+                select(func.count())
+                .select_from(CoachProfile)
+                .join(User, User.id == CoachProfile.user_id)
+                .where(User.is_active.is_(True))
+                .scalar_subquery(),
+                select(
+                    func.coalesce(func.sum(func.greatest(e.amount_due - e.discount - e.amount_paid, 0)), 0)
+                )
+                .where(e.period <= month_start(today))
+                .scalar_subquery(),
+                collected(month_from, month_to),
+                collected(year_from, year_to),
+                select(func.count(func.distinct(e.student_id)))
+                .where(e.amount_paid + e.discount < e.amount_due, e.due_date < today)
+                .scalar_subquery(),
+                _count(PaymentSubmission, PaymentSubmission.status == SubmissionStatus.PENDING),
+                _count(Category, Category.status == RecordStatus.ACTIVE),
+                _count(Programme, Programme.status == RecordStatus.ACTIVE),
+                _count(TeamMember, TeamMember.status == RecordStatus.ACTIVE),
+                _count(GalleryItem, GalleryItem.status == RecordStatus.ACTIVE),
+                _count(Job, Job.status == JobStatus.OPEN),
+                _count(JobApplication, JobApplication.status == ApplicationStatus.UNDER_REVIEW),
+                _count(Enquiry, Enquiry.status == EnquiryStatus.NEW),
             )
         )
-        or 0
-    )
+    ).one()
+    (
+        total,
+        active,
+        coaches,
+        outstanding,
+        month_paid,
+        year_paid,
+        overdue,
+        pending,
+        n_cat,
+        n_prog,
+        n_team,
+        n_gallery,
+        n_jobs,
+        n_apps,
+        n_enq,
+    ) = figures
 
     recent_students, _ = await students.list_students(db, PageParams(page=1, page_size=5), sort="-createdAt")
     recent_subs, _ = await submissions.list_submissions(
@@ -123,36 +159,23 @@ async def summary(db: DbSession) -> DashboardSummary:
     )
 
     return DashboardSummary(
-        students=StudentCounts(
-            total=await _count(db, model=Student),
-            active=await _count(db, Student.status == RecordStatus.ACTIVE, model=Student),
-        ),
-        active_coaches=await db.scalar(
-            select(func.count())
-            .select_from(CoachProfile)
-            .join(User, User.id == CoachProfile.user_id)
-            .where(User.is_active.is_(True))
-        )
-        or 0,
+        students=StudentCounts(total=total, active=active),
+        active_coaches=coaches,
         fees=FeeTotals(
-            outstanding=Decimal(outstanding or 0),
-            collected_this_month=await collected(month_from, month_to),
-            collected_this_year=await collected(year_from, year_to),
-            overdue_students=overdue_students,
+            outstanding=Decimal(outstanding),
+            collected_this_month=Decimal(month_paid),
+            collected_this_year=Decimal(year_paid),
+            overdue_students=overdue,
         ),
-        pending_verifications=await _count(
-            db, PaymentSubmission.status == SubmissionStatus.PENDING, model=PaymentSubmission
-        ),
+        pending_verifications=pending,
         cms=CmsCounts(
-            categories=await _count(db, Category.status == RecordStatus.ACTIVE, model=Category),
-            programmes=await _count(db, Programme.status == RecordStatus.ACTIVE, model=Programme),
-            team=await _count(db, TeamMember.status == RecordStatus.ACTIVE, model=TeamMember),
-            gallery=await _count(db, GalleryItem.status == RecordStatus.ACTIVE, model=GalleryItem),
-            open_jobs=await _count(db, Job.status == JobStatus.OPEN, model=Job),
-            applications_under_review=await _count(
-                db, JobApplication.status == ApplicationStatus.UNDER_REVIEW, model=JobApplication
-            ),
-            new_enquiries=await _count(db, Enquiry.status == EnquiryStatus.NEW, model=Enquiry),
+            categories=n_cat,
+            programmes=n_prog,
+            team=n_team,
+            gallery=n_gallery,
+            open_jobs=n_jobs,
+            applications_under_review=n_apps,
+            new_enquiries=n_enq,
         ),
         recent_admissions=recent_students,
         recent_submissions=recent_subs,

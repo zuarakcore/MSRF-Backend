@@ -1,6 +1,6 @@
 import uuid
-from collections.abc import Iterable
-from datetime import timedelta
+from collections.abc import Iterable, Sequence
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any, Literal, NamedTuple
 
@@ -57,7 +57,11 @@ async def get_student(db: AsyncSession, student_id: uuid.UUID) -> Student:
 # --- listing ---------------------------------------------------------------------------
 
 
-def _attendance_subquery() -> Any:
+# Per-student metrics (attendance %, this month's fee status, fee totals) are computed only for the
+# students actually being returned (a page of 20, or one profile), never for the whole roster.
+
+
+def _attendance_subquery(ids: Sequence[uuid.UUID]) -> Any:
     since = today_local() - timedelta(days=ATTENDANCE_WINDOW_DAYS)
     return (
         select(
@@ -65,21 +69,21 @@ def _attendance_subquery() -> Any:
             func.count().filter(StudentAttendance.status == AttendanceStatus.PRESENT).label("present"),
             func.count().label("total"),
         )
-        .where(StudentAttendance.session_date >= since)
+        .where(StudentAttendance.student_id.in_(ids), StudentAttendance.session_date >= since)
         .group_by(StudentAttendance.student_id)
         .subquery()
     )
 
 
-def _current_fee_subquery() -> Any:
+def _current_fee_subquery(ids: Sequence[uuid.UUID]) -> Any:
     return (
         select(FeeLedgerEntry.student_id.label("student_id"), ledger.status_expr().label("fee_status"))
-        .where(FeeLedgerEntry.period == month_start(today_local()))
+        .where(FeeLedgerEntry.student_id.in_(ids), FeeLedgerEntry.period == month_start(today_local()))
         .subquery()
     )
 
 
-def _ledger_totals_subquery() -> Any:
+def _ledger_totals_subquery(ids: Sequence[uuid.UUID]) -> Any:
     e = FeeLedgerEntry
     return (
         select(
@@ -88,6 +92,7 @@ def _ledger_totals_subquery() -> Any:
             func.sum(e.amount_paid).label("paid"),
             func.sum(e.discount).label("discount"),
         )
+        .where(e.student_id.in_(ids))
         .group_by(e.student_id)
         .subquery()
     )
@@ -102,6 +107,42 @@ class StudentRow(NamedTuple):
     discount: Any
 
 
+_NO_METRICS: tuple[Any, ...] = (None, None, 0, 0, 0)
+
+
+async def _metrics(db: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, tuple[Any, ...]]:
+    """(attendance rate, current fee status, due, paid, discount) for the given students: one query."""
+    if not ids:
+        return {}
+    attendance = _attendance_subquery(ids)
+    fees = _current_fee_subquery(ids)
+    totals = _ledger_totals_subquery(ids)
+    rate = func.round(cast(100 * attendance.c.present, Numeric) / func.nullif(attendance.c.total, 0), 1)
+    stmt = (
+        select(
+            Student.id,
+            rate,
+            fees.c.fee_status,
+            func.coalesce(totals.c.due, 0),
+            func.coalesce(totals.c.paid, 0),
+            func.coalesce(totals.c.discount, 0),
+        )
+        .outerjoin(attendance, attendance.c.student_id == Student.id)
+        .outerjoin(fees, fees.c.student_id == Student.id)
+        .outerjoin(totals, totals.c.student_id == Student.id)
+        .where(Student.id.in_(ids))
+    )
+    return {row[0]: tuple(row[1:]) for row in (await db.execute(stmt)).all()}
+
+
+async def _with_metrics(db: AsyncSession, students: Sequence[Student]) -> list[StudentRow]:
+    metrics: dict[uuid.UUID, tuple[Any, ...]] = {}
+    ids = [s.id for s in students]
+    for i in range(0, len(ids), 1000):  # bounded IN lists for large exports
+        metrics |= await _metrics(db, ids[i : i + 1000])
+    return [StudentRow(s, *metrics.get(s.id, _NO_METRICS)) for s in students]
+
+
 def filtered_students(
     *,
     search: str | None = None,
@@ -113,23 +154,8 @@ def filtered_students(
     fee_status: str | None = None,
     sort: str = "fullName",
 ) -> Select[Any]:
-    attendance = _attendance_subquery()
-    fees = _current_fee_subquery()
-    totals = _ledger_totals_subquery()
-    rate = func.round(cast(100 * attendance.c.present, Numeric) / func.nullif(attendance.c.total, 0), 1)
-    stmt = (
-        select(
-            Student,
-            rate.label("attendance_percentage"),
-            fees.c.fee_status,
-            func.coalesce(totals.c.due, 0),
-            func.coalesce(totals.c.paid, 0),
-            func.coalesce(totals.c.discount, 0),
-        )
-        .outerjoin(attendance, attendance.c.student_id == Student.id)
-        .outerjoin(fees, fees.c.student_id == Student.id)
-        .outerjoin(totals, totals.c.student_id == Student.id)
-    )
+    """Plain filtered student query (no aggregates), ordered; used for counting and paging."""
+    stmt = select(Student)
     if search:
         like = contains(search)
         stmt = stmt.where(
@@ -148,11 +174,21 @@ def filtered_students(
     if training_center_id:
         stmt = stmt.where(Student.training_center_id == training_center_id)
     if birth_year:
-        stmt = stmt.where(extract("year", Student.date_of_birth) == birth_year)
+        start = date(birth_year, 1, 1)  # range, not extract(): lets the date_of_birth index be used
+        stmt = stmt.where(Student.date_of_birth >= start, Student.date_of_birth < date(birth_year + 1, 1, 1))
     if status:
         stmt = stmt.where(Student.status == status)
     if fee_status:
-        stmt = stmt.where(fees.c.fee_status == fee_status)
+        e = FeeLedgerEntry
+        stmt = stmt.where(
+            select(e.id)
+            .where(
+                e.student_id == Student.id,
+                e.period == month_start(today_local()),
+                ledger.status_expr() == fee_status,
+            )
+            .exists()
+        )
     return stmt.order_by(SORTS.get(sort, SORTS["fullName"]), Student.id)
 
 
@@ -175,12 +211,13 @@ async def list_students(
 ) -> tuple[list[StudentListItem], int]:
     stmt = filtered_students(**filters)
     total = await db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
-    rows = (await db.execute(stmt.limit(params.page_size).offset(params.offset))).all()
-    return [_list_item(StudentRow(*r)) for r in rows], total
+    students = list(await db.scalars(stmt.limit(params.page_size).offset(params.offset)))
+    return [_list_item(row) for row in await _with_metrics(db, students)], total
 
 
 async def iter_students(db: AsyncSession, limit: int = 10_000, **filters: Any) -> list[StudentRow]:
-    return [StudentRow(*r) for r in (await db.execute(filtered_students(**filters).limit(limit))).all()]
+    students = list(await db.scalars(filtered_students(**filters).limit(limit)))
+    return await _with_metrics(db, students)
 
 
 async def filter_options(db: AsyncSession) -> FilterOptions:
@@ -226,7 +263,7 @@ async def student_detail(db: AsyncSession, student: Student) -> StudentDetail:
             ).where(FeeLedgerEntry.student_id == student.id)
         )
     ).one()
-    row = StudentRow(*(await db.execute(filtered_students().where(Student.id == student.id))).one())
+    row = (await _with_metrics(db, [student]))[0]
     totals = StudentTotals(
         present=counts.get(AttendanceStatus.PRESENT, 0),
         absent=counts.get(AttendanceStatus.ABSENT, 0),

@@ -168,7 +168,10 @@ async def load_session(db: AsyncSession, session_id: uuid.UUID) -> TrainingSessi
     return await db.scalar(
         select(TrainingSession)
         .where(TrainingSession.id == session_id)
-        .options(selectinload(TrainingSession.splits), selectinload(TrainingSession.attendance))
+        .options(
+            selectinload(TrainingSession.splits),
+            selectinload(TrainingSession.attendance).selectinload(StudentAttendance.student),
+        )
         .execution_options(populate_existing=True)
     )
 

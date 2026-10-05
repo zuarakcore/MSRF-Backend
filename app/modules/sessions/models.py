@@ -125,7 +125,8 @@ class StudentAttendance(UUIDPrimaryKeyMixin, Base):
     status: Mapped[AttendanceStatus] = mapped_column(pg_enum(AttendanceStatus, "attendance_status"))
     remarks: Mapped[str | None] = mapped_column(String(300))
 
-    student: Mapped["Student"] = relationship(lazy="selectin")
+    # Not auto-loaded: attendance streams already join the student; session detail loads it explicitly.
+    student: Mapped["Student"] = relationship(lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("session_id", "student_id", name="uq_student_attendance_session_student"),
