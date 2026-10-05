@@ -89,6 +89,7 @@ def create_app() -> FastAPI:
         hsts=settings.is_production,
         docs_paths=("/api/docs", "/api/redoc", "/api/openapi.json"),
         embeddable_paths=("/media/", f"{settings.API_PREFIX}/files/"),
+        allow_private_network=not settings.is_production,
     )
 
     app.include_router(api_router, prefix=settings.API_PREFIX)

@@ -23,6 +23,7 @@ os.environ.update(
     EMAIL_BACKEND="memory",
     JWT_SECRET_KEY="test-secret-key-that-is-long-enough-for-hs256",
     CORS_ORIGINS="http://localhost:5173",
+    CORS_ORIGIN_REGEX="",  # never inherit a developer's allow-all .env setting
     TRUSTED_HOSTS="test",
     ADMIN_APP_URL="http://admin.test",
     MEDIA_ROOT=tempfile.mkdtemp(prefix="msrf-test-media-"),

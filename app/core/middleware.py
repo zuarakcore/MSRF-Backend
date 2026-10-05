@@ -102,6 +102,7 @@ class RequestContextMiddleware:
         hsts: bool,
         docs_paths: tuple[str, ...],
         embeddable_paths: tuple[str, ...] = (),
+        allow_private_network: bool = False,
     ) -> None:
         self.app = app
         self.hsts = hsts
@@ -109,6 +110,7 @@ class RequestContextMiddleware:
         # Signed file links and public media are meant to be shown in <img> tags on other origins
         # (website, admin app, CDN); access to them is controlled by the URL signature, not CORP.
         self.embeddable_paths = embeddable_paths
+        self.allow_private_network = allow_private_network
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -121,7 +123,9 @@ class RequestContextMiddleware:
         start = time.perf_counter()
         status_code = 500
         path: str = scope["path"]
-        origin = dict(scope["headers"]).get(b"origin", b"").decode("latin-1")[:200] or None
+        request_headers = dict(scope["headers"])
+        origin = request_headers.get(b"origin", b"").decode("latin-1")[:200] or None
+        wants_private_network = request_headers.get(b"access-control-request-private-network") == b"true"
 
         async def send_wrapper(message: Message) -> None:
             nonlocal status_code
@@ -132,6 +136,10 @@ class RequestContextMiddleware:
                 headers.extend(_SECURITY_HEADERS)
                 corp = b"cross-origin" if path.startswith(self.embeddable_paths) else b"same-site"
                 headers.append((b"cross-origin-resource-policy", corp))
+                if self.allow_private_network and wants_private_network:
+                    # Chrome's Private/Local Network Access: a page calling a LAN address (e.g. a
+                    # developer's laptop calling this Mac) needs this opt-in on the preflight.
+                    headers.append((b"access-control-allow-private-network", b"true"))
                 if not path.startswith(self.docs_paths):
                     headers.append(_API_CSP)
                 if self.hsts:
