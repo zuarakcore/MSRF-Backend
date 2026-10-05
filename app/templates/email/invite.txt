@@ -1,10 +1,19 @@
 Hello {{ full_name }},
 
-An account has been created for you on the {{ app_name }} coach portal.
-Your login email is: {{ email }}
+Welcome to the MSRF Coaching Staff! Your coach account has been created by the Academy Administration.
 
-Open this link to set your password:
+Your Login Credentials:
+----------------------------------------
+Full Name: {{ full_name }}
+Role: Coach
+Username / Email: {{ email }}
+Password: {{ password }}
+Portal URL: {{ login_url }}
+----------------------------------------
 
+You can log in directly to the Coach Portal at:
+{{ login_url }}
+
+To set or change your password anytime, visit:
 {{ link }}
-
-The link expires in {{ expires_hours }} hours. Ask the academy office for a new one if it expires.
+(Link expires in {{ expires_hours }} hours)

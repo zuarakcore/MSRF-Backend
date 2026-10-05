@@ -100,6 +100,21 @@ def seed_demo_activity() -> None:
         typer.echo(f"  {key:<22} {value}")
 
 
+@cli.command("attach-sample-images")
+def attach_sample_images() -> None:
+    """Download AI-generated sample photos and attach them to demo records. Development only."""
+    from app.sample_images import attach_sample_images as run
+
+    async def _run() -> dict[str, int]:
+        async with get_sessionmaker()() as db:
+            stats = await run(db)
+        await get_engine().dispose()
+        return stats
+
+    for key, value in asyncio.run(_run()).items():
+        typer.echo(f"  {key:<14} {value}")
+
+
 @cli.command("generate-ledger")
 def generate_ledger() -> None:
     """Create this month's fee entries now (the scheduler also does this daily)."""

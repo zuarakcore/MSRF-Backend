@@ -45,6 +45,8 @@ class CoachPatch(InputModel):
     photo_file_id: uuid.UUID | None = None
     category_ids: list[uuid.UUID] | None = Field(default=None, max_length=50)
     status: RecordStatus | None = None
+    password: str | None = Field(default=None, min_length=6, max_length=128)
+    temp_password: str | None = Field(default=None, min_length=6, max_length=128)
 
 
 class CoachListItem(CamelModel):
@@ -61,6 +63,8 @@ class CoachListItem(CamelModel):
     categories: list[RefItem]
     student_count: int
     attendance_rate: float | None
+    temp_password: str | None = None
+    default_password: str | None = None
 
 
 class CoachDetail(CoachListItem):

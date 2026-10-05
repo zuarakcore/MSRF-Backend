@@ -221,19 +221,24 @@ async def request_password_reset(db: AsyncSession, email: str) -> None:
     )
 
 
-async def send_invite(db: AsyncSession, user: User) -> None:
-    """Create an invite token and email it. Commits."""
+async def send_invite(db: AsyncSession, user: User, temp_password: str | None = None) -> None:
+    """Create an invite token and email credentials + link. Commits."""
     settings = get_settings()
     raw = await _create_auth_token(
         db, user, AuthTokenPurpose.INVITE, timedelta(hours=settings.INVITE_EXPIRE_HOURS)
     )
     await db.commit()
+    pwd = temp_password or "Coach#2026!"
     queue_email(
         "invite",
         user.email,
         {
             "full_name": user.full_name,
             "email": user.email,
+            "password": pwd,
+            "temp_password": pwd,
+            "role": "Coach",
+            "login_url": f"{settings.ADMIN_APP_URL.rstrip('/')}/login",
             "link": _set_password_link(raw),
             "expires_hours": settings.INVITE_EXPIRE_HOURS,
         },

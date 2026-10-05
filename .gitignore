@@ -14,3 +14,4 @@ celerybeat-schedule*
 .DS_Store
 logs/
 media/
+sample_images/

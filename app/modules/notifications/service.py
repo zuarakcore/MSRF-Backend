@@ -41,6 +41,20 @@ async def notify_admins(
             ["id", "user_id", "type", "title", "message", "link", "related_id"], admins
         )
     )
+    try:
+        from app.modules.websocket.manager import manager
+
+        await manager.broadcast(
+            {
+                "type": "notification",
+                "notificationType": type_.value,
+                "title": title,
+                "message": message,
+                "link": link,
+            }
+        )
+    except Exception:
+        pass
 
 
 async def list_for_user(

@@ -9,7 +9,7 @@ from app.core.timeutils import month_start, today_local
 from app.modules.fees.models import FeeLedgerEntry
 from app.modules.notifications.models import Notification
 from app.modules.users.models import Role
-from tests.conftest import UserFactory, bearer, login
+from tests.conftest import DEFAULT_PASSWORD, UserFactory, bearer, login
 from tests.factories import PDF_BYTES, coach_headers, make_coach, make_refs, make_student
 
 API = "/api/v1"
@@ -261,12 +261,18 @@ async def test_create_coach_sends_invite_and_never_returns_a_password(
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["inviteStatus"] == "PENDING"
-    assert body["email"] == "rajesh@example.com"
-    assert [c["name"] for c in body["categories"]] == [cat.name]
-    assert "password" not in response.text.lower()
+    assert body["tempPassword"] == "Coach#2026!"
+    assert body["defaultPassword"] == "Coach#2026!"
     assert email_module.outbox[-1].to == "rajesh@example.com"
 
-    token = email_module.outbox[-1].text.split("token=")[1].split()[0]
+    assert "Password: " in email_module.outbox[-1].text
+    pwd = email_module.outbox[-1].text.split("Password: ")[1].split("\n")[0].strip()
+
+    # Login with credentials sent in the email
+    token_str = await login(client, "rajesh@example.com", pwd)
+    assert token_str
+
+    token = email_module.outbox[-1].text.split("token=")[1].split()[0].rstrip(")")
     assert (
         await client.post(
             f"{API}/auth/reset-password", json={"token": token, "newPassword": "coach-password-1"}
@@ -301,6 +307,42 @@ async def test_deactivating_a_coach_cuts_access_immediately(
 
     await client.patch(f"{API}/coaches/{coach.id}", json={"status": "INACTIVE"}, headers=headers)
     assert (await client.get(f"{API}/coach/dashboard", headers=coach_auth)).status_code == 401
+
+    # Attempting to log in as an inactive coach must be forbidden
+    login_attempt = await client.post(
+        f"{API}/auth/login", json={"email": coach.user.email, "password": DEFAULT_PASSWORD}
+    )
+    assert login_attempt.status_code == 403
+    assert login_attempt.json()["code"] == "ACCOUNT_INACTIVE"
+
+
+async def test_edit_coach_credentials_sends_email_only_when_credentials_change(
+    client: AsyncClient, make_user: UserFactory, db: AsyncSession
+) -> None:
+    headers = await _admin(client, make_user)
+    cat, _, _ = await make_refs(db)
+    coach = await make_coach(db, [cat], email="coach_edit@example.com")
+    email_module.outbox.clear()
+
+    # 1. Edit non-credential field (e.g. phone/bio) -> no email sent
+    res1 = await client.patch(
+        f"{API}/coaches/{coach.id}", json={"phone": "9998887776", "bio": "Updated bio text"}, headers=headers
+    )
+    assert res1.status_code == 200
+    assert len(email_module.outbox) == 0
+
+    # 2. Edit credentials (password) -> credentials_updated email sent
+    res2 = await client.patch(
+        f"{API}/coaches/{coach.id}", json={"password": "NewCoachPassword#2026"}, headers=headers
+    )
+    assert res2.status_code == 200
+    assert len(email_module.outbox) == 1
+    assert "Credentials Have Been Updated" in email_module.outbox[-1].subject
+    assert "NewCoachPassword#2026" in email_module.outbox[-1].text
+
+    # Login with new password works
+    token_str = await login(client, "coach_edit@example.com", "NewCoachPassword#2026")
+    assert token_str
 
 
 async def test_coach_student_view_is_scoped_and_reduced(client: AsyncClient, db: AsyncSession) -> None:

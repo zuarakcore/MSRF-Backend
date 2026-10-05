@@ -432,7 +432,9 @@ async def delete_job(db: AsyncSession, job_id: uuid.UUID) -> None:
 def _open_jobs() -> Select[Any]:
     today = today_local()
     return select(Job).where(
-        Job.status == JobStatus.OPEN, or_(Job.closing_date.is_(None), Job.closing_date >= today)
+        Job.status == JobStatus.OPEN,
+        Job.posted_on <= today,
+        or_(Job.closing_date.is_(None), Job.closing_date >= today),
     )
 
 

@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import timedelta
 from typing import Any
@@ -10,6 +11,7 @@ from app.core.enums import AttendanceStatus, RecordStatus
 from app.core.errors import BusinessRuleViolation, Conflict, NotFound
 from app.core.pagination import PageParams
 from app.core.search import contains
+from app.core.security import hash_password
 from app.core.timeutils import period_bounds, today_local, utcnow
 from app.modules.audit import service as audit
 from app.modules.auth import service as auth_service
@@ -135,6 +137,8 @@ async def _to_items(db: AsyncSession, coaches: list[CoachProfile], detail: bool 
             "categories": [RefItem.model_validate(cat) for cat in c.categories],
             "student_count": stats[c.id][0],
             "attendance_rate": stats[c.id][1],
+            "temp_password": "Coach#2026!",
+            "default_password": "Coach#2026!",
         }
         if detail:
             base |= {
@@ -192,7 +196,14 @@ async def create_coach(db: AsyncSession, data: CoachIn, actor: User) -> CoachDet
     photo = await files.get_file_of_purpose(db, data.photo_file_id, FilePurpose.COACH_PHOTO)
     categories = await _resolve_categories(db, data.category_ids)
 
-    user = User(email=email, full_name=data.full_name, role=Role.COACH, password_hash=None)
+    temp_password = secrets.token_urlsafe(10)
+    user = User(
+        email=email,
+        full_name=data.full_name,
+        role=Role.COACH,
+        password_hash=hash_password(temp_password),
+        is_verified=False,
+    )
     db.add(user)
     await db.flush()
     coach = CoachProfile(
@@ -204,7 +215,7 @@ async def create_coach(db: AsyncSession, data: CoachIn, actor: User) -> CoachDet
     db.add(coach)
     await db.flush()
     audit.record(db, "COACH_CREATED", actor_user_id=actor.id, entity_type="coach", entity_id=coach.id)
-    await auth_service.send_invite(db, user)  # commits, then queues the invite email
+    await auth_service.send_invite(db, user, temp_password=temp_password)  # commits, then queues the invite email
     await db.refresh(coach)
     return await coach_detail(db, coach)
 
@@ -223,10 +234,20 @@ async def update_coach(db: AsyncSession, coach_id: uuid.UUID, data: CoachPatch, 
     user = coach.user
     values = data.model_dump(exclude_unset=True)
 
+    credentials_changed = False
+    new_password = values.pop("password", None) or values.pop("temp_password", None)
+
     if (email := values.pop("email", None)) and email.lower() != user.email:
         if await db.scalar(select(User.id).where(User.email == email.lower(), User.id != user.id)):
             raise Conflict("A user with this email already exists", code="EMAIL_EXISTS")
         user.email = email.lower()
+        credentials_changed = True
+
+    if new_password:
+        user.password_hash = hash_password(new_password)
+        user.token_version += 1
+        credentials_changed = True
+
     if (name := values.pop("full_name", None)) is not None:
         user.full_name = name
     if (status := values.pop("status", None)) is not None:
@@ -249,6 +270,23 @@ async def update_coach(db: AsyncSession, coach_id: uuid.UUID, data: CoachPatch, 
 
     await db.commit()
     await db.refresh(coach)
+
+    if credentials_changed:
+        from app.core.config import get_settings
+        from app.core.email import queue_email
+
+        settings = get_settings()
+        queue_email(
+            "credentials_updated",
+            user.email,
+            {
+                "full_name": user.full_name,
+                "email": user.email,
+                "password": new_password,
+                "login_url": f"{settings.ADMIN_APP_URL.rstrip('/')}/login",
+            },
+        )
+
     return await coach_detail(db, coach)
 
 
@@ -278,11 +316,13 @@ async def delete_coach(db: AsyncSession, coach_id: uuid.UUID, actor: User) -> No
 
 async def resend_invite(db: AsyncSession, coach_id: uuid.UUID) -> None:
     coach = await get_coach(db, coach_id)
-    if coach.user.is_verified:
-        raise Conflict("This coach has already set a password", code="INVITE_ALREADY_ACCEPTED")
     if not coach.user.is_active:
         raise BusinessRuleViolation("Activate the coach before sending an invite", code="ACCOUNT_INACTIVE")
-    await auth_service.send_invite(db, coach.user)
+    temp_password = secrets.token_urlsafe(10)
+    coach.user.password_hash = hash_password(temp_password)
+    coach.user.is_verified = False
+    await _deactivate_sessions(db, coach.user)
+    await auth_service.send_invite(db, coach.user, temp_password=temp_password)
 
 
 async def coach_attendance(
