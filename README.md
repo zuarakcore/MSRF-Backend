@@ -82,6 +82,7 @@ docker compose exec api python -m app.cli create-admin --email you@example.com -
 python -m app.cli create-admin --email … --name …     # prompts for the password
 echo "$PW" | python -m app.cli create-admin --email … --name … --password-stdin
 python -m app.cli seed-dev                            # demo data (refuses in production)
+python -m app.cli seed-demo-activity                 # + 6 months of fees, payments, sessions, reports, gallery…
 python -m app.cli generate-ledger                     # create this month's fee entries now
 ```
 

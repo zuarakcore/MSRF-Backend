@@ -80,6 +80,26 @@ def seed_dev() -> None:
         typer.echo(f"  {role:<6} {email:<28} {password}")
 
 
+@cli.command("seed-demo-activity")
+def seed_demo_activity() -> None:
+    """Add months of demo activity (fees, payments, sessions, reports, gallery, ...). Development only."""
+    from app.demo_data import seed_activity
+
+    async def _run() -> dict[str, int]:
+        async with get_sessionmaker()() as db:
+            stats = await seed_activity(db)
+        await get_engine().dispose()
+        return stats
+
+    stats = asyncio.run(_run())
+    if not stats:
+        typer.echo("Demo activity already present; nothing to do.")
+        return
+    typer.echo("Demo activity added:")
+    for key, value in stats.items():
+        typer.echo(f"  {key:<22} {value}")
+
+
 @cli.command("generate-ledger")
 def generate_ledger() -> None:
     """Create this month's fee entries now (the scheduler also does this daily)."""
