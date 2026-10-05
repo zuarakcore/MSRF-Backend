@@ -470,6 +470,12 @@ async def apply(
         raise NotFound("Job not found", code="JOB_NOT_FOUND")
     if await db.scalar(_open_jobs().where(Job.id == job_id)) is None:
         raise Conflict("Applications for this position are closed", code="JOB_CLOSED")
+    email = str(form.email_address).lower()
+    already = await db.scalar(
+        select(JobApplication.id).where(JobApplication.job_id == job_id, JobApplication.email == email)
+    )
+    if already:
+        raise Conflict("You have already applied for this position", code="ALREADY_APPLIED")
     stored = await files.store_upload(db, cv, purpose=FilePurpose.RESUME, uploaded_by_id=None)
     application = JobApplication(
         job_id=job_id,

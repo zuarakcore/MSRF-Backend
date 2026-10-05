@@ -386,3 +386,21 @@ async def test_missing_photos_use_the_default_image(
     )
     public = (await client.get(f"{API}/public/team-members")).json()
     assert public[0]["photoUrl"].endswith("/static/default-image.png")
+
+
+async def test_student_email_is_unique_case_insensitive_but_parent_email_is_shared(
+    client: AsyncClient, make_user: UserFactory, db: AsyncSession
+) -> None:
+    headers = await _admin(client, make_user)
+    cat, pt, tc = await make_refs(db)
+    first = _student_body(cat, pt, tc, email="kid@example.com", parentEmail="family@example.com")
+    assert (await client.post(f"{API}/students", json=first, headers=headers)).status_code == 201
+
+    clash = _student_body(cat, pt, tc, fullName="Other Kid", email="KID@example.com")
+    response = await client.post(f"{API}/students", json=clash, headers=headers)
+    assert response.status_code == 409 and response.json()["code"] == "EMAIL_EXISTS"
+
+    sibling = _student_body(cat, pt, tc, fullName="Sibling", parentEmail="family@example.com")
+    assert (await client.post(f"{API}/students", json=sibling, headers=headers)).status_code == 201
+    no_email = _student_body(cat, pt, tc, fullName="No Email Kid")
+    assert (await client.post(f"{API}/students", json=no_email, headers=headers)).status_code == 201

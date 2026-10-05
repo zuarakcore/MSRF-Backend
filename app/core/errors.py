@@ -95,6 +95,8 @@ class ServiceUnavailable(AppError):
 # service-level pre-checks cannot (two requests inserting the same email at once).
 INTEGRITY_ERROR_MAP: dict[str, tuple[int, str, str]] = {
     "uq_users_email": (409, "EMAIL_EXISTS", "A user with this email already exists"),
+    "uq_students_email": (409, "EMAIL_EXISTS", "Another student already uses this email"),
+    "uq_job_applications_job_email": (409, "ALREADY_APPLIED", "You have already applied for this position"),
 }
 
 

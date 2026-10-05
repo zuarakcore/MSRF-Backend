@@ -284,12 +284,23 @@ async def _check_admission_number(db: AsyncSession, number: str, exclude: uuid.U
         raise Conflict("This admission number is already in use", code="ADMISSION_NUMBER_EXISTS")
 
 
+async def _check_email(db: AsyncSession, email: str | None, exclude: uuid.UUID | None = None) -> None:
+    if not email:
+        return
+    stmt = select(Student.id).where(Student.email == email)  # citext: case-insensitive
+    if exclude:
+        stmt = stmt.where(Student.id != exclude)
+    if await db.scalar(stmt):
+        raise Conflict("Another student already uses this email", code="EMAIL_EXISTS")
+
+
 async def build_student(db: AsyncSession, data: StudentIn) -> Student:
     """Validate references and create (flush) a student; does not commit."""
     values = data.model_dump()
     await _check_references(db, values)
     photo = await files.get_file_of_purpose(db, values.pop("photo_file_id"), FilePurpose.STUDENT_PHOTO)
     year = data.admission_date.year
+    await _check_email(db, values.get("email"))
     if values.get("admission_number"):
         await _check_admission_number(db, values["admission_number"])
     else:
@@ -327,6 +338,8 @@ async def update_student(db: AsyncSession, student_id: uuid.UUID, data: StudentP
     await _check_references(db, values)
     if values.get("admission_number"):
         await _check_admission_number(db, values["admission_number"], exclude=student_id)
+    if values.get("email"):
+        await _check_email(db, values["email"], exclude=student_id)
     if "photo_file_id" in values:
         photo = await files.get_file_of_purpose(db, values.pop("photo_file_id"), FilePurpose.STUDENT_PHOTO)
         student.photo_file_id = photo.id if photo else None

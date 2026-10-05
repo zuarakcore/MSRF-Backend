@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, Numeric, String
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, Numeric, String, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -67,6 +67,9 @@ class Student(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __table_args__ = (
         CheckConstraint("monthly_fee >= 0", name="monthly_fee_non_negative"),
+        # A student's own email is unique when given (citext: case-insensitive). parent_email is NOT
+        # unique on purpose: siblings share a parent.
+        Index("uq_students_email", "email", unique=True, postgresql_where=text("email IS NOT NULL")),
         Index("ix_students_status_category", "status", "category_id"),
         Index(
             "ix_students_full_name_trgm",

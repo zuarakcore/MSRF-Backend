@@ -3,7 +3,7 @@ import uuid
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ARRAY, CheckConstraint, Date, ForeignKey, Index, String, Text
+from sqlalchemy import ARRAY, CheckConstraint, Date, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import CITEXT, INET
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -111,7 +111,11 @@ class JobApplication(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     job: Mapped[Job] = relationship(lazy="selectin")
     cv: Mapped["StoredFile"] = relationship(lazy="selectin")
 
-    __table_args__ = (Index("ix_job_applications_status_created", "status", "created_at"),)
+    __table_args__ = (
+        Index("ix_job_applications_status_created", "status", "created_at"),
+        # One application per person per job (they may still apply for other jobs).
+        UniqueConstraint("job_id", "email", name="uq_job_applications_job_email"),
+    )
 
 
 class EnquiryStatus(StrEnum):

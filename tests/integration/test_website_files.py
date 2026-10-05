@@ -155,7 +155,9 @@ async def test_jobs_and_applications(client: AsyncClient, make_user: UserFactory
     )
     assert late.status_code == 409 and late.json()["code"] == "JOB_CLOSED"
     not_a_cv = await client.post(
-        f"{API}/public/jobs/{job['id']}/applications", data=form, files={"cv": ("cv.pdf", png_bytes())}
+        f"{API}/public/jobs/{job['id']}/applications",
+        data={**form, "emailAddress": "other@example.com"},  # a new applicant, but the file is not a CV
+        files={"cv": ("cv.pdf", png_bytes())},
     )
     assert not_a_cv.status_code == 415
 
@@ -205,3 +207,37 @@ async def test_dashboard_and_search(client: AsyncClient, make_user: UserFactory)
     assert summary.json()["students"] == {"total": 0, "active": 0}
     results = await client.get(f"{API}/search", params={"q": "ad"}, headers=h)
     assert set(results.json()) == {"students", "coaches", "paymentSubmissions", "payments"}
+
+
+async def test_one_application_per_person_per_job(client: AsyncClient, make_user: UserFactory) -> None:
+    h = await _admin(client, make_user)
+    today = today_local().isoformat()
+    jobs = [
+        (
+            await client.post(
+                f"{API}/jobs",
+                json={"title": t, "location": "Kozhikode", "description": "x", "postedOn": today},
+                headers=h,
+            )
+        ).json()["id"]
+        for t in ("Head Coach", "Scout")
+    ]
+    form = {
+        "fullName": "Vikram Sethi",
+        "mobileNumber": "9845099887",
+        "emailAddress": "v@example.com",
+        "location": "Kochi",
+    }
+    url = f"{API}/public/jobs/{{}}/applications"
+    assert (
+        await client.post(url.format(jobs[0]), data=form, files={"cv": ("cv.pdf", PDF_BYTES)})
+    ).status_code == 201
+    again = await client.post(
+        url.format(jobs[0]),
+        data={**form, "emailAddress": "V@Example.com"},
+        files={"cv": ("cv.pdf", PDF_BYTES)},
+    )
+    assert again.status_code == 409 and again.json()["code"] == "ALREADY_APPLIED"
+    assert (
+        await client.post(url.format(jobs[1]), data=form, files={"cv": ("cv.pdf", PDF_BYTES)})
+    ).status_code == 201
