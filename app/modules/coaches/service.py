@@ -215,7 +215,9 @@ async def create_coach(db: AsyncSession, data: CoachIn, actor: User) -> CoachDet
     db.add(coach)
     await db.flush()
     audit.record(db, "COACH_CREATED", actor_user_id=actor.id, entity_type="coach", entity_id=coach.id)
-    await auth_service.send_invite(db, user, temp_password=temp_password)  # commits, then queues the invite email
+    await auth_service.send_invite(
+        db, user, temp_password=temp_password
+    )  # commits, then queues the invite email
     await db.refresh(coach)
     return await coach_detail(db, coach)
 

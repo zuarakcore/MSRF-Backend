@@ -19,9 +19,9 @@ from app.modules.reference.router import categories_router, program_types_router
 from app.modules.sessions.router import admin_router as sessions_admin_router
 from app.modules.sessions.router import coach_router as sessions_coach_router
 from app.modules.students.router import router as students_router
-from app.modules.websocket.router import router as websocket_router
 from app.modules.website.router import admin as website_admin_router
 from app.modules.website.router import public as website_public_router
+from app.modules.websocket.router import router as websocket_router
 
 api_router = APIRouter()
 for router in (

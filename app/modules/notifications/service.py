@@ -53,8 +53,10 @@ async def notify_admins(
                 "link": link,
             }
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        import logging
+
+        logging.getLogger(__name__).warning("WebSocket broadcast error: %s", exc)
 
 
 async def list_for_user(

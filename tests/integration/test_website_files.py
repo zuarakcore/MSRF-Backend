@@ -115,18 +115,16 @@ async def test_jobs_and_applications(client: AsyncClient, make_user: UserFactory
             headers=h,
         )
     ).json()
-    future = (
-        await client.post(
-            f"{API}/jobs",
-            json={
-                "title": "Future Job",
-                "location": "Kerala",
-                "description": "Starting next month",
-                "postedOn": (today + timedelta(days=5)).isoformat(),
-            },
-            headers=h,
-        )
-    ).json()
+    await client.post(
+        f"{API}/jobs",
+        json={
+            "title": "Future Job",
+            "location": "Kerala",
+            "description": "Starting next month",
+            "postedOn": (today + timedelta(days=5)).isoformat(),
+        },
+        headers=h,
+    )
     assert [j["title"] for j in (await client.get(f"{API}/public/jobs")).json()] == ["Head Coach"]
 
     form = {

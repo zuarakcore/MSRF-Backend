@@ -34,15 +34,26 @@ API = "https://image.pollinations.ai/prompt/{prompt}?width={w}&height={h}&seed={
 STYLE = "photorealistic, natural light, high detail, sharp focus"
 
 GALLERY_PROMPTS = {
-    "Match day squad": "youth football team in green jerseys posing for a team photo on a stadium pitch, Kerala",
-    "U-15 State Championship final": "teenage football players celebrating a goal in green kits during a final match",
-    "Grassroots session": "young children practising football dribbling between cones on a green pitch with a coach",
+    "Match day squad": (
+        "youth football team in green jerseys posing for a team photo on a stadium pitch, Kerala"
+    ),
+    "U-15 State Championship final": (
+        "teenage football players celebrating a goal in green kits during a final match"
+    ),
+    "Grassroots session": (
+        "young children practising football dribbling between cones on a green pitch with a coach"
+    ),
     "Small-sided games": "kids playing a small-sided football match on artificial turf, action shot",
     "Academy open trials": "teenage football trial day, players in bibs lined up while coaches take notes",
-    "Annual awards night": "football academy awards ceremony on stage, young players holding trophies, warm lights",
-    "Argentinos Juniors delegation visit": "Argentine football coaches in red and white tracksuits meeting young Indian "
-    "players on a pitch",
-    "Coach clinic with AJ staff": "football coaching clinic, coaches gathered around a tactics board on a pitch",
+    "Annual awards night": (
+        "football academy awards ceremony on stage, young players holding trophies, warm lights"
+    ),
+    "Argentinos Juniors delegation visit": (
+        "Argentine football coaches in red and white tracksuits meeting young Indian players on a pitch"
+    ),
+    "Coach clinic with AJ staff": (
+        "football coaching clinic, coaches gathered around a tactics board on a pitch"
+    ),
 }
 
 
@@ -83,7 +94,9 @@ def _portrait_prompt(gender: Gender, role: str) -> str:
     }[role]
     person = who.get(gender, who[Gender.MALE])
     setting = {
-        "student": "wearing a green football academy jersey, head and shoulders portrait, football pitch background",
+        "student": (
+            "wearing a green football academy jersey, head and shoulders portrait, football pitch background"
+        ),
         "coach": "wearing a green academy tracksuit, head and shoulders portrait, stadium background",
         "board": "professional corporate headshot, plain neutral studio background",
     }[role]
