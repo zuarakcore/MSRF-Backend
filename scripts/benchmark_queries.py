@@ -37,7 +37,9 @@ async def _token(role: Role) -> tuple[dict[str, str], Any]:
         user = await db.scalar(select(User).where(User.role == role, User.is_active.is_(True)).limit(1))
         assert user is not None, f"no active {role} user"
         coach = await db.scalar(select(CoachProfile).where(CoachProfile.user_id == user.id))
-        token, _ = create_access_token(user_id=user.id, role=user.role.value, token_version=user.token_version)
+        token, _ = create_access_token(
+            user_id=user.id, role=user.role.value, token_version=user.token_version
+        )
         return {"Authorization": f"Bearer {token}"}, coach
 
 
