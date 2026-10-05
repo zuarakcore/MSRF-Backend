@@ -45,8 +45,8 @@ def default_file_ref() -> FileRef:
     """The single placeholder image used wherever a record has no photo."""
     return FileRef(
         id=None,
-        file_name="default-image.png",
-        content_type="image/png",
+        file_name="default-image.jpg",
+        content_type="image/jpeg",
         size_bytes=0,
         url=get_settings().default_image_url,
         is_default=True,

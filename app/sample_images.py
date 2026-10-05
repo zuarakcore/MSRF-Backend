@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 CACHE_DIR = BACKEND_DIR / "sample_images"
-DEFAULT_IMAGE_PATH = Path(__file__).resolve().parent / "static" / "default-image.png"
+DEFAULT_IMAGE_PATH = Path(__file__).resolve().parent / "static" / "default-image.jpg"
 API = "https://image.pollinations.ai/prompt/{prompt}?width={w}&height={h}&seed={seed}&nologo=true&model=flux"
 STYLE = "photorealistic, natural light, high detail, sharp focus"
 
@@ -125,7 +125,9 @@ async def attach_sample_images(db: AsyncSession, *, progress: bool = True) -> di
 
     from PIL import Image
 
-    Image.open(BytesIO(data)).convert("RGB").save(DEFAULT_IMAGE_PATH, format="PNG", optimize=True)
+    default = Image.open(BytesIO(data)).convert("RGB")
+    default.thumbnail((512, 512))
+    default.save(DEFAULT_IMAGE_PATH, format="JPEG", quality=84, optimize=True, progressive=True)
     stats["default_image"] = 1
 
     # 2. Coaches

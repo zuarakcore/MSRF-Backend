@@ -103,7 +103,7 @@ async def test_rejected_host_response_still_has_cors_headers() -> None:
 
 
 async def test_default_image_is_served_and_embeddable(client: AsyncClient) -> None:
-    response = await client.get("/static/default-image.png")
+    response = await client.get("/static/default-image.jpg")
     assert response.status_code == 200
-    assert response.headers["content-type"] == "image/png"
+    assert response.headers["content-type"] == "image/jpeg"
     assert response.headers["cross-origin-resource-policy"] == "cross-origin"

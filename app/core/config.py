@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     MEDIA_ROOT: str = "media"
     # Base URL that serves PUBLIC files (CDN/bucket URL in production).
     PUBLIC_MEDIA_BASE_URL: str = "http://localhost:8000/media/public"
-    # Image returned wherever a record has no photo. Empty = the built-in /static/default-image.png.
+    # Image returned wherever a record has no photo. Empty = the built-in /static/default-image.jpg.
     DEFAULT_IMAGE_URL: str = ""
     # Lifetime of signed links to private files (student photos, documents, CVs).
     FILE_URL_TTL_SECONDS: int = Field(default=3600, ge=60, le=86_400)
@@ -115,7 +115,7 @@ class Settings(BaseSettings):
 
     @property
     def default_image_url(self) -> str:
-        return self.DEFAULT_IMAGE_URL or f"{self.API_BASE_URL.rstrip('/')}/static/default-image.png"
+        return self.DEFAULT_IMAGE_URL or f"{self.API_BASE_URL.rstrip('/')}/static/default-image.jpg"
 
     def origin_allowed(self, origin: str) -> bool:
         if origin in self.CORS_ORIGINS:

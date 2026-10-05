@@ -379,13 +379,13 @@ async def test_missing_photos_use_the_default_image(
     for photo in (student["photo"], coach["photo"]):
         assert photo["isDefault"] is True
         assert photo["id"] is None
-        assert photo["url"].endswith("/static/default-image.png")
+        assert photo["url"].endswith("/static/default-image.jpg")
 
     await client.post(
         f"{API}/team-members", json={"name": "No Photo", "designation": "Director"}, headers=headers
     )
     public = (await client.get(f"{API}/public/team-members")).json()
-    assert public[0]["photoUrl"].endswith("/static/default-image.png")
+    assert public[0]["photoUrl"].endswith("/static/default-image.jpg")
 
 
 async def test_student_email_is_unique_case_insensitive_but_parent_email_is_shared(
